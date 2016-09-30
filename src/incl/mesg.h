@@ -11,45 +11,10 @@
 
 #include "uri.h"
 
-/* 消息类型 */
-typedef enum
-{
-    MSG_TYPE_UNKNOWN                    /* 未知消息 */
-
-    , MSG_PING                          /* PING-请求 */
-    , MSG_PONG                          /* PONG-应答 */
-
-    , MSG_SEARCH_REQ                    /* 搜索关键字-请求 */
-    , MSG_SEARCH_RSP                    /* 搜索关键字-应答 */
-
-    , MSG_INSERT_WORD_REQ               /* 插入关键字-请求 */
-    , MSG_INSERT_WORD_RSP               /* 插入关键字-应答 */
-
-    , MSG_PRINT_INVT_TAB_REQ            /* 打印倒排表-请求 */
-    , MSG_PRINT_INVT_TAB_RSP            /* 打印倒排表-应答 */
-
-    , MSG_QUERY_CONF_REQ                /* 查询配置信息-请求 */
-    , MSG_QUERY_CONF_RSP                /* 反馈配置信息-应答 */
-
-    , MSG_QUERY_WORKER_STAT_REQ         /* 查询工作信息-请求 */
-    , MSG_QUERY_WORKER_STAT_RSP         /* 反馈工作信息-应答 */
-
-    , MSG_QUERY_WORKQ_STAT_REQ          /* 查询工作队列信息-请求 */
-    , MSG_QUERY_WORKQ_STAT_RSP          /* 反馈工作队列信息-应答 */
-
-    , MSG_SWITCH_SCHED_REQ              /* 切换调度-请求 */
-    , MSG_SWITCH_SCHED_RSP              /* 反馈切换调度信息-应答 */
-
-    , MSG_SUB_REQ                       /* 订阅-请求 */
-    , MSG_SUB_RSP                       /* 订阅-应答 */
-
-    , MSG_TYPE_TOTAL                    /* 消息类型总数 */
-} mesg_type_e;
-
 /* 通用协议头 */
 typedef struct
 {
-    uint32_t type;                      /* 消息类型 Range: mesg_type_e */
+    uint32_t type;                      /* 消息类型 */
 #define MSG_FLAG_SYS   (0)              /* 0: 系统数据类型 */
 #define MSG_FLAG_USR   (1)              /* 1: 自定义数据类型 */
     uint32_t flag;                      /* 标识量(0:系统数据类型 1:自定义数据类型) */
@@ -141,7 +106,7 @@ typedef struct
 /* 订阅-请求 */
 typedef struct
 {
-    mesg_type_e type;                   /* 订阅类型(消息类型) */
+    uint32_t type;                      /* 订阅类型(消息类型) */
     int nid;                            /* 结点ID */
 } mesg_sub_req_t;
 
@@ -159,7 +124,7 @@ typedef struct
 typedef struct
 {
     int code;                           /* 应答码 */
-    mesg_type_e type;                   /* 订阅类型(消息类型) */
+    uint32_t type;                      /* 订阅类型(消息类型) */
 } mesg_sub_rsp_t;
 
 #define mesg_sub_rsp_hton(rsp) do { /* 主机 -> 网络 */\

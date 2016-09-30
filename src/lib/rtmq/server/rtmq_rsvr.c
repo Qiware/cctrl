@@ -1022,7 +1022,7 @@ static int rtmq_rsvr_link_auth_req_hdl(rtmq_cntx_t *ctx,
  **注意事项:
  **作    者: # Qifeng.zou # 2016.04.09 07:07:26 #
  ******************************************************************************/
-static rtmq_sub_list_t *rtmq_sub_list_creat(mesg_type_e type)
+static rtmq_sub_list_t *rtmq_sub_list_creat(uint32_t type)
 {
     rtmq_sub_list_t *list;
 

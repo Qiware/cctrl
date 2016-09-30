@@ -16,7 +16,7 @@ typedef struct
 /* 订阅列表 */
 typedef struct
 {
-    mesg_type_e type;           /* 订阅类型 */
+    uint32_t type;              /* 订阅类型 */
     list2_t *nodes;             /* 订阅结点列表(数组管理) */
 } rtmq_sub_list_t;
 

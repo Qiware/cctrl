@@ -92,7 +92,7 @@ typedef struct
 /* 订阅请求 */
 typedef struct
 {
-    mesg_type_e type;                   /* 订阅内容: 订阅的消息类型 */
+    uint32_t type;                      /* 订阅内容: 订阅的消息类型 */
 } rtmq_sub_req_t;
 
 #define RTMQ_SUB_REQ_HTON(n, h) do {    /* 主机 -> 网络 */\

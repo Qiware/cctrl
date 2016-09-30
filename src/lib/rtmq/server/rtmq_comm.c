@@ -270,7 +270,7 @@ int rtmq_sub_mgr_init(rtmq_sub_mgr_t *sub)
  **注意事项:
  **作    者: # Qifeng.zou # 2016.04.23 13:29:24 #
  ******************************************************************************/
-int rtmq_sub_query(rtmq_cntx_t *ctx, mesg_type_e type)
+int rtmq_sub_query(rtmq_cntx_t *ctx, uint32_t type)
 {
     int nid;
     rtmq_sub_node_t *node;
