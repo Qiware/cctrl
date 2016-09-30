@@ -32,6 +32,9 @@ int main(int argc, void *argv[])
         case 'S':
             digit = htons(digit);
             break;
+        default:
+        fprintf(stderr, "Parmaters isn't right!");
+        return -1;
     }
     fprintf(stderr, "dight:%d/0x%X!", digit, digit);
     return 0;

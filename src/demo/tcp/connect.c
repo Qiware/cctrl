@@ -9,7 +9,7 @@
 
 #define PORT (80)
 
-int main(int argc, char *argv[])
+int main(int argc, void *argv[])
 {
 #if 0
     int port, fd;

@@ -12,9 +12,9 @@ OBJS = connect.o #recv.o
 HEADS = $(call func_get_dep_head_list, $(SRCS))
 TARGET = connect #recv
 
-SRCS2 = send.c
-OBJS2 = send.o
-TARGET2 = send 
+SRCS2 = ntoh.c
+OBJS2 = ntoh.o
+TARGET2 = ntoh 
 
 .PHONY: clean
 

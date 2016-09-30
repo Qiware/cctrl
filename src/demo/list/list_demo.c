@@ -6,24 +6,33 @@
 #include <stdint.h>
 
 #include "list.h"
+#include "redo.h"
+#include "rb_tree.h"
 
-#define LIST_NUM    (10)
+#define LIST_NUM    (1000000)
 
 typedef struct
 {
     int idx;
 } list_data_t;
 
+static int rbt_cmp_cb(list_data_t *d1, list_data_t *d2)
+{
+    return d1->idx - d2->idx;
+}
+
 int main(void)
 {
-    int idx;
-    list_t list;
-    list_data_t *data;
-    list_node_t *prev;
+    int idx, total;
+    list_t *list;
+    list_data_t *data, key;
+    rbt_tree_t *rbt;
 
-    memset(&list, 0, sizeof(list));
+    list = list_creat(NULL);
+    rbt = rbt_creat(NULL, (cmp_cb_t)rbt_cmp_cb);
 
-    for (idx=0, prev=NULL; idx<LIST_NUM; ++idx) {
+    total = 0;
+    for (idx=0; idx<LIST_NUM; ++idx) {
         data = (list_data_t *)calloc(1, sizeof(list_data_t));
         if (NULL == data) {
             fprintf(stderr, "errmsg:[%d] %s!", errno, strerror(errno));
@@ -32,20 +41,31 @@ int main(void)
 
         data->idx = idx;
 
-        /* 插入测试 */
-    #if 0
-        list_push(&list, data);
-        list_insert_tail(&list, data);
-    #else        
-        list_insert(&list, prev, data);
-    #endif
+        list_rpush(list, data);
+        rbt_insert(rbt, data);
+        ++total;
     }
 
     /* 删除测试 */
-    //list_remove(&list, node);
-    list_lpop(&list);
-    //list_remove_tail(&list);
-    //list_remove(&list, del);
+    for (idx=LIST_NUM-1; idx >=0; --idx) {
+        key.idx = idx;
+        rbt_delete(rbt, &key, (void **)&data);
+        if (NULL == data) {
+            assert(0);
+        }
+        list_remove(list, data);
+        //fprintf(stderr, "Delete idx:%d\n", data->idx);
+        free(data);
+    }
+
+    while (1) {
+        data = list_lpop(list);
+        if (NULL == data) {
+            break;
+        }
+        fprintf(stdout, "Left data! idx:%d\n", data->idx);
+        free(data);
+    }
 
     return 0;
 }
