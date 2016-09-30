@@ -9,6 +9,8 @@
 #if !defined(__MESG_H__)
 #define __MESG_H__
 
+#include "comm.h"
+
 /* 通用协议头 */
 typedef struct
 {
