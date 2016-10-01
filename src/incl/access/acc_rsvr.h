@@ -41,11 +41,20 @@ typedef struct
     void *body;                     /* 报体 */
     list_t *send_list;              /* 发送链表 */
     void *user;                     /* 用户自定义数据 */
+
+    socket_t *sck;                  /* 套接字对象 */
 } acc_socket_extra_t;
 
 void *acc_rsvr_routine(void *_ctx);
 
 int acc_rsvr_init(acc_cntx_t *ctx, acc_rsvr_t *agent, int idx);
 int acc_rsvr_destroy(acc_rsvr_t *agent);
+
+/* 内部接口 */
+int acc_lsvr_init(acc_cntx_t *ctx, acc_lsvr_t *lsn, int idx);
+
+int acc_conn_cid_tab_add(acc_cntx_t *ctx, acc_socket_extra_t *extra);
+acc_socket_extra_t *acc_conn_cid_tab_del(acc_cntx_t *ctx, uint64_t cid);
+int acc_get_rid_by_cid(acc_cntx_t *ctx, uint64_t cid);
 
 #endif /*__ACC_RSVR_H__*/

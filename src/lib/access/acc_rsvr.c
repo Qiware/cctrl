@@ -24,6 +24,8 @@ static int acc_send_data(acc_cntx_t *ctx, acc_rsvr_t *rsvr, socket_t *sck);
 static int acc_rsvr_dist_send_data(acc_cntx_t *ctx, acc_rsvr_t *rsvr);
 static socket_t *acc_push_into_send_list(acc_cntx_t *ctx, acc_rsvr_t *rsvr, uint64_t cid, void *addr);
 
+static int acc_rsvr_kick_conn(acc_cntx_t *ctx, acc_rsvr_t *rsvr);
+
 static int acc_rsvr_event_hdl(acc_cntx_t *ctx, acc_rsvr_t *rsvr);
 static int acc_rsvr_timeout_hdl(acc_cntx_t *ctx, acc_rsvr_t *rsvr);
 
@@ -108,6 +110,11 @@ static int agt_rsvr_recv_cmd_hdl(acc_cntx_t *ctx, acc_rsvr_t *rsvr, socket_t *sc
                     log_error(rsvr->log, "Disturibute data failed！");
                 }
                 break;
+            case CMD_KICK_CONN:
+                if (acc_rsvr_kick_conn(ctx, rsvr)) {
+                    log_error(rsvr->log, "Kick connection failed！");
+                }
+                break;
             default:
                 log_error(rsvr->log, "Unknown command type [%d]！", cmd.type);
                 break;
@@ -132,6 +139,7 @@ static int agt_rsvr_recv_cmd_hdl(acc_cntx_t *ctx, acc_rsvr_t *rsvr, socket_t *sc
 int acc_rsvr_init(acc_cntx_t *ctx, acc_rsvr_t *rsvr, int idx)
 {
     struct epoll_event ev;
+    acc_socket_extra_t *extra;
     char path[FILE_NAME_MAX_LEN];
     acc_conf_t *conf = ctx->conf;
     socket_t *cmd_sck = &rsvr->cmd_sck;
@@ -155,11 +163,14 @@ int acc_rsvr_init(acc_cntx_t *ctx, acc_rsvr_t *rsvr, int idx)
         }
 
         /* > 创建附加信息 */
-        cmd_sck->extra = calloc(1, sizeof(acc_socket_extra_t));
-        if (NULL == cmd_sck->extra) {
+        extra = calloc(1, sizeof(acc_socket_extra_t));
+        if (NULL == extra) {
             log_error(rsvr->log, "Alloc from slab failed!");
             break;
         }
+
+        extra->sck = cmd_sck;
+        cmd_sck->extra = extra;
 
         /* > 创建命令套接字 */
         acc_rsvr_cmd_usck_path(conf, rsvr->id, path, sizeof(path));
@@ -327,9 +338,11 @@ static int acc_rsvr_event_hdl(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
  **注意事项: 
  **作    者: # Qifeng.zou # 2016.12.24 #
  ******************************************************************************/
-static int acc_rsvr_get_timeout_conn_list(socket_t *sck, acc_conn_timeout_list_t *timeout)
+static int acc_rsvr_get_timeout_conn_list(
+        acc_socket_extra_t *extra, acc_conn_timeout_list_t *timeout)
 {
 #define ACC_SCK_TIMEOUT_SEC (180)
+    socket_t *sck = extra->sck;
 
     /* 判断是否超时，则加入到timeout链表中 */
     if ((timeout->ctm - sck->rdtm <= ACC_SCK_TIMEOUT_SEC)
@@ -355,8 +368,8 @@ static int acc_rsvr_get_timeout_conn_list(socket_t *sck, acc_conn_timeout_list_t
  ******************************************************************************/
 static int acc_rsvr_conn_timeout(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
 {
-    socket_t *sck, key;
-    acc_socket_extra_t extra;
+    socket_t *sck;
+    acc_socket_extra_t *extra, key;
     acc_conn_timeout_list_t timeout;
 
     memset(&timeout, 0, sizeof(timeout));
@@ -372,8 +385,8 @@ static int acc_rsvr_conn_timeout(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
         }
 
         /* > 获取超时连接 */
-        extra.cid = rsvr->id;
-        key.extra = &extra;
+        key.cid = rsvr->id;
+
         hash_tab_trav_slot(ctx->conn_cid_tab, &key,
                 (trav_cb_t)acc_rsvr_get_timeout_conn_list, &timeout, RDLOCK);
 
@@ -479,6 +492,7 @@ static int acc_rsvr_add_conn(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
                 continue;
             }
 
+            extra->sck = sck;
             extra->rid = rsvr->id;
             extra->cid = add[idx]->cid;
             extra->send_list = list_creat(NULL);
@@ -506,7 +520,7 @@ static int acc_rsvr_add_conn(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
             queue_dealloc(ctx->connq[rsvr->id], add[idx]);      /* 释放连接队列空间 */
 
             /* > 插入红黑树中(以序列号为主键) */
-            if (acc_conn_cid_tab_add(ctx, sck)) {
+            if (acc_conn_cid_tab_add(ctx, extra)) {
                 log_error(rsvr->log, "Insert into avl failed! fd:%d cid:%lu",
                           sck->fd, extra->cid);
                 CLOSE(sck->fd);
@@ -970,19 +984,18 @@ static int acc_rsvr_dist_send_data(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
 static socket_t *acc_push_into_send_list(
         acc_cntx_t *ctx, acc_rsvr_t *rsvr, uint64_t cid, void *addr)
 {
-    socket_t *sck, key;
-    acc_socket_extra_t *extra, key_extra;
-
-    key_extra.cid = cid;
-    key.extra = &key_extra;
+    socket_t *sck;
+    acc_socket_extra_t *extra, key;
 
     /* > 查询会话对象 */
-    sck = hash_tab_query(ctx->conn_cid_tab, &key, WRLOCK);
-    if (NULL == sck) {
+    key.cid = cid;
+
+    extra = hash_tab_query(ctx->conn_cid_tab, &key, WRLOCK);
+    if (NULL == extra) {
         return NULL;
     }
 
-    extra = (acc_socket_extra_t *)sck->extra;
+    sck = extra->sck;
 
     /* > 放入发送列表 */
     if (list_rpush(extra->send_list, addr)) {
@@ -994,3 +1007,63 @@ static socket_t *acc_push_into_send_list(
 
     return sck;
 }
+
+/******************************************************************************
+ **函数名称: acc_rsvr_kick_conn
+ **功    能: 踢某连接
+ **输入参数:
+ **     ctx: 全局对象
+ **     rsvr: 接收服务
+ **输出参数: NONE
+ **返    回: 0:成功 !0:失败
+ **实现描述: 
+ **注意事项: 千万勿将共享变量参与MIN()三目运算, 否则可能出现严重错误!!!!且很难找出原因!
+ **作    者: # Qifeng.zou # 2016-10-01 19:08:57 #
+ ******************************************************************************/
+static int acc_rsvr_kick_conn(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
+{
+    int num, idx;
+    socket_t *sck;
+    queue_t *kickq;
+    acc_kick_req_t *kick;
+    acc_socket_extra_t *extra, key;
+    void *addr[AGT_RSVR_DIST_POP_NUM];
+
+    kickq = ctx->kickq[rsvr->id];
+    while (1) {
+        num = MIN(queue_used(kickq), AGT_RSVR_DIST_POP_NUM);
+        if (0 == num) {
+            break;
+        }
+
+        /* > 弹出应答数据 */
+        num = queue_mpop(kickq, addr, num);
+        if (0 == num) {
+            break;
+        }
+
+        log_debug(rsvr->log, "Pop data succ! num:%d", num);
+
+        for (idx=0; idx<num; ++idx) {
+            kick = (acc_kick_req_t *)addr[idx];
+
+            /* > 查询会话对象 */
+            key.cid = kick->cid;
+
+            extra = hash_tab_query(ctx->conn_cid_tab, &key, RDLOCK);
+            if (NULL == extra) {
+                continue;
+            }
+
+            sck = extra->sck;
+
+            hash_tab_unlock(ctx->conn_cid_tab, &key, RDLOCK);
+
+            acc_rsvr_del_conn(ctx, rsvr, sck);
+        }
+    }
+
+    return ACC_OK;
+}
+
+

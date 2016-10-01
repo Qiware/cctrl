@@ -8,6 +8,7 @@ typedef enum
     , CMD_ADD_SCK   = 0x0001                /* 添加套接字 */
     , CMD_DIST_DATA = 0x0002                /* 分发数据 */
     , CMD_PROC_DATA = 0x0003                /* 处理数据 */
+    , CMD_KICK_CONN = 0x0004                /* 踢某连接 */
 } cmd_type_e;
 
 /* 分发数据参数 */

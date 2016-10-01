@@ -85,16 +85,10 @@ typedef struct _acc_cntx_t {
     queue_t **connq;                /* 连接队列(注:数组长度与Agent相等) */
     ring_t **recvq;                 /* 接收队列(注:数组长度与Agent相等) */
     ring_t **sendq;                 /* 发送队列(注:数组长度与Agent相等) */
+    queue_t **kickq;                /* 踢人队列(注:数组长度与Agent相等) */
 } acc_cntx_t;
 
 #define ACC_GET_NODE_ID(ctx) ((ctx)->conf->nid)
-
-/* 内部接口 */
-int acc_lsvr_init(acc_cntx_t *ctx, acc_lsvr_t *lsn, int idx);
-
-int acc_conn_cid_tab_add(acc_cntx_t *ctx, socket_t *sck);
-socket_t *acc_conn_cid_tab_del(acc_cntx_t *ctx, uint64_t cid);
-int acc_get_rid_by_cid(acc_cntx_t *ctx, uint64_t cid);
 
 /* 外部接口 */
 acc_cntx_t *acc_init(acc_protocol_t *protocol, acc_conf_t *conf, log_cycle_t *log);

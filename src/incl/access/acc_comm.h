@@ -42,6 +42,12 @@ typedef struct
     uint64_t cid;           /* Connection ID */
 } acc_add_sck_t;
 
+/* KICK请求对象 */
+typedef struct
+{
+    uint64_t cid;           /* 踢人请求 */
+} acc_kick_req_t;
+
 /* 超时连接链表 */
 typedef struct
 {

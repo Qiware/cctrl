@@ -15,20 +15,15 @@ static int acc_creat_lsvr(acc_cntx_t *ctx);
 static int acc_creat_queue(acc_cntx_t *ctx);
 
 /* CID比较回调 */
-static int acc_conn_cid_cmp_cb(const socket_t *sck1, const socket_t *sck2)
+static int acc_conn_cid_cmp_cb(const acc_socket_extra_t *extra1, const acc_socket_extra_t *extra2)
 {
-    acc_socket_extra_t *extra1, *extra2;
-
-    extra1 = (acc_socket_extra_t *)sck1->extra;
-    extra2 = (acc_socket_extra_t *)sck2->extra;
-
     return (extra1->cid - extra2->cid);
 }
 
 /* CID哈希回调 */
-static int acc_conn_cid_hash_cb(const socket_t *sck)
+static uint64_t acc_conn_cid_hash_cb(const acc_socket_extra_t *extra)
 {
-    return ((acc_socket_extra_t *)sck->extra)->cid;
+    return extra->cid;
 }
 
 /******************************************************************************
@@ -384,6 +379,21 @@ static int acc_creat_queue(acc_cntx_t *ctx)
         }
     }
 
+    /* > 创建KICK队列(与Agent数一致) */
+    ctx->kickq = (queue_t **)calloc(conf->rsvr_num, sizeof(queue_t*));
+    if (NULL == ctx->kickq) {
+        log_error(ctx->log, "errmsg:[%d] %s!", errno, strerror(errno));
+        return ACC_ERR;
+    }
+
+    for (idx=0; idx<conf->rsvr_num; ++idx) {
+        ctx->kickq[idx] = queue_creat(conf->connq.max, sizeof(acc_kick_req_t));
+        if (NULL == ctx->kickq[idx]) {
+            log_error(ctx->log, "Create kick queue failed!");
+            return ACC_ERR;
+        }
+    }
+
     return ACC_OK;
 }
 
@@ -423,9 +433,9 @@ static int acc_comm_init(acc_cntx_t *ctx)
  **注意事项: 
  **作    者: # Qifeng.zou # 2015-06-24 23:58:46 #
  ******************************************************************************/
-int acc_conn_cid_tab_add(acc_cntx_t *ctx, socket_t *sck)
+int acc_conn_cid_tab_add(acc_cntx_t *ctx, acc_socket_extra_t *extra)
 {
-    return hash_tab_insert(ctx->conn_cid_tab, sck, WRLOCK);
+    return hash_tab_insert(ctx->conn_cid_tab, extra, WRLOCK);
 }
 
 /******************************************************************************
@@ -436,16 +446,14 @@ int acc_conn_cid_tab_add(acc_cntx_t *ctx, socket_t *sck)
  **输出参数: NONE
  **返    回: 0:成功 !0:失败
  **实现描述:
- **注意事项: 
+ **注意事项: TODO: XXXX
  **作    者: # Qifeng.zou # 2015-06-24 23:58:46 #
  ******************************************************************************/
-socket_t *acc_conn_cid_tab_del(acc_cntx_t *ctx, uint64_t cid)
+acc_socket_extra_t *acc_conn_cid_tab_del(acc_cntx_t *ctx, uint64_t cid)
 {
-    socket_t key;
-    acc_socket_extra_t extra;
+    acc_socket_extra_t key;
 
-    extra.cid = cid;
-    key.extra = &extra;
+    key.cid = cid;
 
     return hash_tab_delete(ctx->conn_cid_tab, &key, WRLOCK);
 }
@@ -464,18 +472,15 @@ socket_t *acc_conn_cid_tab_del(acc_cntx_t *ctx, uint64_t cid)
 int acc_get_rid_by_cid(acc_cntx_t *ctx, uint64_t cid)
 {
     int rid;
-    socket_t *sck, key;
-    acc_socket_extra_t *extra, key_extra;
+    acc_socket_extra_t *extra, key;
 
-    key_extra.cid = cid;
-    key.extra = &key_extra;
+    key.cid = cid;
 
-    sck = hash_tab_query(ctx->conn_cid_tab, &key, RDLOCK);
-    if (NULL == sck) {
+    extra = hash_tab_query(ctx->conn_cid_tab, &key, RDLOCK);
+    if (NULL == extra) {
         return -1;
     }
 
-    extra = (acc_socket_extra_t *)sck->extra;
     rid = extra->rid;
 
     hash_tab_unlock(ctx->conn_cid_tab, &key, RDLOCK);
