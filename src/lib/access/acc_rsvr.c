@@ -369,7 +369,7 @@ static int acc_rsvr_get_timeout_conn_list(
 static int acc_rsvr_conn_timeout(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
 {
     socket_t *sck;
-    acc_socket_extra_t *extra, key;
+    acc_socket_extra_t key;
     acc_conn_timeout_list_t timeout;
 
     memset(&timeout, 0, sizeof(timeout));

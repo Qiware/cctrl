@@ -96,6 +96,7 @@ int acc_launch(acc_cntx_t *ctx);
 void acc_destroy(acc_cntx_t *ctx);
 
 int acc_async_send(acc_cntx_t *ctx, int type, uint64_t cid, void *data, int len);
+int acc_async_kick(acc_cntx_t *ctx, uint64_t cid);
 uint64_t acc_sck_get_cid(socket_t *sck);
 
 #endif /*__ACCESS_H__*/
