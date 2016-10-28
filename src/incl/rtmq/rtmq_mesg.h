@@ -11,32 +11,32 @@
 /* 系统数据类型 */
 typedef enum
 {
-    RTMQ_CMD_UNKNOWN                    /* 未知命令 */
+    RTMQ_CMD_UNKNOWN                    = 0x0000  /* 未知命令 */
 
-    , RTMQ_CMD_LINK_AUTH_REQ            /* 链路鉴权请求 */
-    , RTMQ_CMD_LINK_AUTH_RSP            /* 链路鉴权应答 */
+    , RTMQ_CMD_LINK_AUTH_REQ            = 0x0001  /* 链路鉴权请求 */
+    , RTMQ_CMD_LINK_AUTH_RSP            = 0x0002  /* 链路鉴权应答 */
 
-    , RTMQ_CMD_KPALIVE_REQ              /* 链路保活请求 */
-    , RTMQ_CMD_KPALIVE_RSP              /* 链路保活应答 */
+    , RTMQ_CMD_KPALIVE_REQ              = 0x0003  /* 链路保活请求 */
+    , RTMQ_CMD_KPALIVE_RSP              = 0x0004  /* 链路保活应答 */
 
-    , RTMQ_CMD_SUB_ONE_REQ              /* 订阅请求: 将消息只发送给一个用户 */
-    , RTMQ_CMD_SUB_ONE_RSP              /* 订阅应答 */
-    , RTMQ_CMD_SUB_ALL_REQ              /* 订阅请求: 将消息发送给所有用户 */
-    , RTMQ_CMD_SUB_ALL_RSP              /* 订阅应答 */
+    , RTMQ_CMD_SUB_ONE_REQ              = 0x0005  /* 订阅请求: 将消息只发送给一个用户 */
+    , RTMQ_CMD_SUB_ONE_RSP              = 0x0006  /* 订阅应答 */
+    , RTMQ_CMD_SUB_ALL_REQ              = 0x0007  /* 订阅请求: 将消息发送给所有用户 */
+    , RTMQ_CMD_SUB_ALL_RSP              = 0x0008  /* 订阅应答 */
 
-    , RTMQ_CMD_ADD_SCK                  /* 接收客户端数据-请求 */
-    , RTMQ_CMD_DIST_REQ                 /* 分发任务请求 */
-    , RTMQ_CMD_PROC_REQ                 /* 处理客户端数据-请求 */
-    , RTMQ_CMD_SEND                     /* 发送数据-请求 */
-    , RTMQ_CMD_SEND_ALL                 /* 发送所有数据-请求 */
+    , RTMQ_CMD_ADD_SCK                  = 0x0009  /* 接收客户端数据-请求 */
+    , RTMQ_CMD_DIST_REQ                 = 0x000A  /* 分发任务请求 */
+    , RTMQ_CMD_PROC_REQ                 = 0x000B  /* 处理客户端数据-请求 */
+    , RTMQ_CMD_SEND                     = 0x000C  /* 发送数据-请求 */
+    , RTMQ_CMD_SEND_ALL                 = 0x000D  /* 发送所有数据-请求 */
 
     /* 查询命令 */
-    , RTMQ_CMD_QUERY_CONF_REQ           /* 查询配置信息-请求 */
-    , RTMQ_CMD_QUERY_CONF_REP           /* 查询配置信息-应答 */
-    , RTMQ_CMD_QUERY_RECV_STAT_REQ      /* 查询接收状态-请求 */
-    , RTMQ_CMD_QUERY_RECV_STAT_REP      /* 查询接收状态-应答 */
-    , RTMQ_CMD_QUERY_PROC_STAT_REQ      /* 查询处理状态-请求 */
-    , RTMQ_CMD_QUERY_PROC_STAT_REP      /* 查询处理状态-应答 */
+    , RTMQ_CMD_QUERY_CONF_REQ           = 0x1001  /* 查询配置信息-请求 */
+    , RTMQ_CMD_QUERY_CONF_REP           = 0x1002  /* 查询配置信息-应答 */
+    , RTMQ_CMD_QUERY_RECV_STAT_REQ      = 0x1003  /* 查询接收状态-请求 */
+    , RTMQ_CMD_QUERY_RECV_STAT_REP      = 0x1004  /* 查询接收状态-应答 */
+    , RTMQ_CMD_QUERY_PROC_STAT_REQ      = 0x1005  /* 查询处理状态-请求 */
+    , RTMQ_CMD_QUERY_PROC_STAT_REP      = 0x1006  /* 查询处理状态-应答 */
 } rtmq_mesg_e;
 
 /* 报头结构 */
@@ -50,7 +50,7 @@ typedef struct
                                             - 0: 系统消息(type: rtmq_mesg_e)
                                             - 1: 自定义消息(type: 0x0000~0xFFFF) */
     uint32_t length;                    /* 消息体长度 */
-#define RTMQ_CHKSUM_VAL  (0x1FE23DC4)    
+#define RTMQ_CHKSUM_VAL  (0x1FE23DC4)
     uint32_t chksum;                    /* 校验值 */
 } __attribute__((packed)) rtmq_header_t;
 

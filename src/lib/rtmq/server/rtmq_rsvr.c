@@ -314,18 +314,12 @@ static int rtmq_rsvr_recv_cmd(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr)
     /* 2. 进行命令处理 */
     switch (cmd.type) {
         case RTMQ_CMD_ADD_SCK:      /* 添加套接字 */
-        {
             return rtmq_rsvr_add_conn_hdl(ctx, rsvr, (rtmq_cmd_add_sck_t *)&cmd.param);
-        }
         case RTMQ_CMD_DIST_REQ:     /* 分发发送数据 */
-        {
             return rtmq_rsvr_dist_data(ctx, rsvr);
-        }
         default:
-        {
             log_error(rsvr->log, "Unknown command! type:%d", cmd.type);
             return RTMQ_ERR_UNKNOWN_CMD;
-        }
     }
 
     return RTMQ_ERR_UNKNOWN_CMD;
