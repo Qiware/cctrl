@@ -1,6 +1,7 @@
-
 #include "mesg.h"
-#include "rtrd_recv.h"
+#include "search.h"
+#include "mem_ref.h"
+#include "rtmq_recv.h"
 
 /* 回调函数 */
 static int rtmq_work_def_hdl(int type, int nid, char *buff, size_t len, void *args)
@@ -10,11 +11,9 @@ static int rtmq_work_def_hdl(int type, int nid, char *buff, size_t len, void *ar
 }
 
 /* 配置RTMQ */
-static void rtmq_setup_conf(rtrd_conf_t *conf, int port)
+static void rtmq_setup_conf(rtmq_conf_t *conf, int port)
 {
-    snprintf(conf->auth.usr, sizeof(conf->auth.usr), "qifeng");
-    snprintf(conf->auth.passwd, sizeof(conf->auth.passwd), "111111");
-
+    rtmq_auth_t *auth;
     snprintf(conf->path, sizeof(conf->path), "./");
 
     conf->port = port;
@@ -26,14 +25,21 @@ static void rtmq_setup_conf(rtrd_conf_t *conf, int port)
     conf->distq_num = 3;
     conf->distq.max = 1024;
     conf->distq.size = 40960;
+
+    conf->auth = list_creat(NULL);
+
+    auth = (rtmq_auth_t *)calloc(1, sizeof(rtmq_auth_t));
+    snprintf(auth->usr, sizeof(auth->usr), "qifeng");
+    snprintf(auth->passwd, sizeof(auth->passwd), "111111");
+    list_rpush(conf->auth, auth);
 }
 
 int main(int argc, const char *argv[])
 {
     int ret, port;
-    rtrd_cntx_t *ctx;
+    rtmq_cntx_t *ctx;
     log_cycle_t *log;
-    rtrd_conf_t conf;
+    rtmq_conf_t conf;
 
     memset(&conf, 0, sizeof(conf));
 
@@ -41,6 +47,8 @@ int main(int argc, const char *argv[])
         fprintf(stderr, "Didn't special port!");
         return -1;
     }
+
+    mem_ref_init();
 
     port = atoi(argv[1]);
 
@@ -55,20 +63,16 @@ int main(int argc, const char *argv[])
     }
 
     /* 1. 接收端初始化 */
-    ctx = rtrd_init(&conf, log);
+    ctx = rtmq_init(&conf, log);
     if (NULL == ctx) {
         fprintf(stderr, "Initialize rcvsvr failed!");
         return RTMQ_ERR;
     }
 
-    rtrd_register(ctx, MSG_SEARCH_REQ, rtmq_work_def_hdl, NULL);
-    rtrd_register(ctx, MSG_PRINT_INVT_TAB_REQ, rtmq_work_def_hdl, NULL);
-    rtrd_register(ctx, MSG_QUERY_CONF_REQ, rtmq_work_def_hdl, NULL);
-    rtrd_register(ctx, MSG_QUERY_WORKER_STAT_REQ, rtmq_work_def_hdl, NULL);
-    rtrd_register(ctx, MSG_QUERY_WORKQ_STAT_REQ, rtmq_work_def_hdl, NULL);
+    rtmq_register(ctx, MSG_SEARCH_REQ, rtmq_work_def_hdl, NULL);
 
     /* 2. 接收服务端工作 */
-    ret = rtrd_launch(ctx);
+    ret = rtmq_launch(ctx);
     if (0 != ret) {
         fprintf(stderr, "Work failed!");
     }

@@ -2,9 +2,10 @@
 #include <sys/time.h>
 
 #include "mesg.h"
+#include "search.h"
+#include "mem_ref.h"
 #include "syscall.h"
-#include "rtsd_send.h"
-#include "rtsd_ssvr.h"
+#include "rtmq_proxy.h"
 
 #define __RTMQ_DEBUG_SEND__
 
@@ -42,7 +43,7 @@ int rtmq_send_debug(rtmq_proxy_t *ctx, int secs)
 
             snprintf(req->words, sizeof(req->words), "%s", "BAIDU");
 
-            if (rtsd_cli_send(ctx, MSG_SEARCH_REQ, req, sizeof(mesg_search_word_req_t))) {
+            if (rtmq_proxy_async_send(ctx, MSG_SEARCH_REQ, req, sizeof(mesg_search_word_req_t))) {
                 idx--;
                 usleep(2);
                 sleep2 += USLEEP*1000000;
@@ -68,7 +69,6 @@ int rtmq_send_debug(rtmq_proxy_t *ctx, int secs)
                 etime.tv_sec - stime.tv_sec,
                 etime.tv_usec - stime.tv_usec,
                 total, fails);
-
     }
 
     pause();
@@ -115,19 +115,21 @@ int main(int argc, const char *argv[])
     port = atoi(argv[1]);
     rtmq_setup_conf(&conf, port);
 
+    mem_ref_init();
+
     log = log_init(LOG_LEVEL_DEBUG, "./rtmq_ssvr.log");
     if (NULL == log) {
         fprintf(stderr, "errmsg:[%d] %s!", errno, strerror(errno));
         return -1;
     }
 
-    ctx = rtsd_init(&conf, log);
+    ctx = rtmq_proxy_init(&conf, log);
     if (NULL == ctx) {
         fprintf(stderr, "Initialize send-server failed!");
         return -1;
     }
 
-    if (rtsd_launch(ctx)) {
+    if (rtmq_proxy_launch(ctx)) {
         fprintf(stderr, "Start up send-server failed!");
         return -1;
     }
