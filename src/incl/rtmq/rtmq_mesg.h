@@ -46,7 +46,7 @@ typedef struct
     uint32_t nid;                       /* 结点ID(上行消息则为源结点ID, 下行消息则为目的结点ID) */
 #define RTMQ_SYS_MESG   (0)             /* 系统类型 */
 #define RTMQ_EXP_MESG   (1)             /* 自定义类型 */
-    uint8_t flag;                       /* 消息标志
+    uint32_t flag;                      /* 消息标志
                                             - 0: 系统消息(type: rtmq_mesg_e)
                                             - 1: 自定义消息(type: 0x0000~0xFFFF) */
     uint32_t length;                    /* 消息体长度 */
@@ -60,6 +60,7 @@ typedef struct
 #define RTMQ_HEAD_NTOH(s, d) do {\
     (d)->type = ntohl((s)->type); \
     (d)->nid = ntohl((s)->nid); \
+    (d)->flag = ntohl((s)->flag); \
     (d)->length = ntohl((s)->length); \
     (d)->chksum = ntohl((s)->chksum); \
 } while(0)
@@ -67,6 +68,7 @@ typedef struct
 #define RTMQ_HEAD_HTON(s, d) do {\
     (d)->type = htonl((s)->type); \
     (d)->nid = htonl((s)->nid); \
+    (d)->flag = htonl((s)->flag); \
     (d)->length = htonl((s)->length); \
     (d)->chksum = htonl((s)->chksum); \
 } while(0)
