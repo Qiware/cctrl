@@ -110,7 +110,6 @@ AGAIN:
         hash_tab_unlock(g_mem_ref_tab, &key, RDLOCK);
         return cnt;
     }
-    hash_tab_unlock(g_mem_ref_tab, &key, RDLOCK);
 
     /* > 新增引用 */
     item = (mem_ref_item_t *)calloc(1, sizeof(mem_ref_item_t));
