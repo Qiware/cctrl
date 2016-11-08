@@ -37,17 +37,8 @@ DIR += "$(LIB_DIR)/redis"
 DIR += "$(LIB_DIR)/agent"
 DIR += "$(LIB_DIR)/invert"
 
-EXEC_DIR = "src/exec"
-DIR += "$(EXEC_DIR)/monitor"
-DIR += "$(EXEC_DIR)/spider/crawler"
-DIR += "$(EXEC_DIR)/spider/filter"
-DIR += "$(EXEC_DIR)/search/frwder"
-DIR += "$(EXEC_DIR)/search/invertd"
-DIR += "$(EXEC_DIR)/search/listend"
-DIR += "$(EXEC_DIR)/search/listend-ws"
-
 DEMO_DIR = "src/demo"
-#DIR += "$(DEMO_DIR)/rtmq"
+DIR += "$(DEMO_DIR)/rbtree"
 
 # 获取系统配置
 CPU_CORES = $(call func_cpu_cores)

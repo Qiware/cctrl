@@ -333,3 +333,55 @@ size_t str_to_num(const char *str)
 
     return num;
 }
+
+/******************************************************************************
+ **函数名称: str_to_ip_port
+ **功    能: 将${IP}:${PORT}解析出${IP}和${PORT}
+ **输入参数:
+ **     str: 字符串${IP}:${PORT}
+ **输出参数:
+ **     ip: IP+PORT对象
+ **返    回: 0:成功 !0:失败
+ **实现描述:
+ **注意事项:
+ **作    者: # Qifeng.zou # 2016.11.07 19:56:02 #
+ ******************************************************************************/
+int str_to_ip_port(const char *str, ip_port_t *ip)
+{
+    int digit, idx;
+    const char *ch = str;
+
+    while (' ' == *ch) {
+        ch += 1;
+    }
+
+    /* > 抽取IP */
+    idx = 0;
+    digit = 0;
+    for (; (':' != *ch) && ('\0' != *ch); ch += 1, idx+=1) {
+        ip->ipaddr[idx] = str[idx];
+        digit *= 10;
+        digit += *ch - '0';
+        if ('.' == *ch) {
+            continue;
+        }
+    }
+
+    ip->ipaddr[idx] = '\0';
+    if (':' != *ch) {
+        return -1;
+    }
+
+    /* > 抽取端口 */
+    ch += 1;
+    ip->port = 0;
+    for (; '\0' != *ch; ch += 1) {
+        if (!isdigit(*ch)) {
+            break;
+        }
+        ip->port *= 10;
+        ip->port += *ch - '0';
+    }
+
+    return 0;
+}

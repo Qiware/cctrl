@@ -1,12 +1,21 @@
 #if !defined(__COMM_H__)
 #define __COMM_H__
 
+
+#include <pwd.h>
+#include <grp.h>
 #include <stdio.h>
+#include <sched.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <netdb.h>
+#include <dlfcn.h>
+#include <limits.h>
+#include <sys/un.h>
+#include <stddef.h>
 #include <memory.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
@@ -18,8 +27,9 @@
 #include <getopt.h>
 #include <sys/shm.h>
 #include <pthread.h>
-#include <stdbool.h>
 #include <sys/uio.h>
+#include <stdbool.h>
+#include <sys/wait.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -28,7 +38,9 @@
 #include <sys/types.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
+#include <sys/utsname.h>
 #include <sys/resource.h>
 #if defined(__JEMALLOC_SUPPORT__)
 #include <jemalloc/jemalloc.h>
