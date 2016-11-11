@@ -349,21 +349,6 @@ static int acc_creat_queue(acc_cntx_t *ctx)
         }
     }
 
-    /* > 创建RECV队列(与Agent数一致) */
-    ctx->recvq = (ring_t **)calloc(conf->rsvr_num, sizeof(ring_t*));
-    if (NULL == ctx->recvq) {
-        log_error(ctx->log, "errmsg:[%d] %s!", errno, strerror(errno));
-        return ACC_ERR;
-    }
-
-    for (idx=0; idx<conf->rsvr_num; ++idx) {
-        ctx->recvq[idx] = ring_creat(conf->recvq.max);
-        if (NULL == ctx->recvq[idx]) {
-            log_error(ctx->log, "Create recv queue failed!");
-            return ACC_ERR;
-        }
-    }
-
     /* > 创建SEND队列(与Agent数一致) */
     ctx->sendq = (ring_t **)calloc(conf->rsvr_num, sizeof(ring_t *));
     if (NULL == ctx->sendq) {
