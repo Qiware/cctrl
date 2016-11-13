@@ -669,7 +669,7 @@ static int rtmq_proxy_ssvr_wiov_add(rtmq_proxy_ssvr_t *ssvr, rtmq_proxy_sct_t *s
         RTMQ_HEAD_HTON(head, head);
 
         /* > 设置发送数据 */
-        wiov_item_add(send, head, len, NULL, mem_dealloc);
+        wiov_item_add(send, head, len, NULL, mem_dealloc, mem_dealloc);
     }
 
     /* > 从发送队列取数据 */
@@ -702,7 +702,7 @@ static int rtmq_proxy_ssvr_wiov_add(rtmq_proxy_ssvr_t *ssvr, rtmq_proxy_sct_t *s
             RTMQ_HEAD_HTON(head, head);
 
             /* > 设置发送数据 */
-            wiov_item_add(send, head, len, ssvr->sendq, queue_dealloc);
+            wiov_item_add(send, head, len, ssvr->sendq, queue_dealloc, queue_dealloc);
         }
     }
 

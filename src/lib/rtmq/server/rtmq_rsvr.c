@@ -415,7 +415,7 @@ static int rtmq_rsvr_wiov_add(rtmq_rsvr_t *rsvr, rtmq_sck_t *sck)
         RTMQ_HEAD_HTON(head, head);
 
         /* 4 设置发送信息 */
-        wiov_item_add(send, (char *)head, len, NULL, mem_ref_dealloc);
+        wiov_item_add(send, (char *)head, len, NULL, mem_ref_dealloc, mem_ref_dealloc);
     }
 
     return RTMQ_OK;

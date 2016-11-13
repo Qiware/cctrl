@@ -84,7 +84,7 @@ void wiov_clean(wiov_t *wiov)
     int idx;
 
     for (idx=wiov->iov_idx; idx<wiov->iov_cnt; ++idx) {
-        wiov->orig[idx].dealloc(wiov->orig[idx].pool, wiov->orig[idx].addr);
+        wiov->orig[idx].fail(wiov->orig[idx].param, wiov->orig[idx].addr, wiov->orig[idx].len);
         wiov_item_reset(wiov, idx);
     }
 
@@ -113,7 +113,7 @@ int wiov_item_adjust(wiov_t *wiov, size_t n)
     for (idx=wiov->iov_idx; idx<wiov->iov_cnt; ++idx, ++wiov->iov_idx) {
         if (len + wiov->iov[idx].iov_len <= n) {
             len += wiov->iov[idx].iov_len;
-            wiov->orig[idx].dealloc(wiov->orig[idx].pool, wiov->orig[idx].addr);
+            wiov->orig[idx].succ(wiov->orig[idx].param, wiov->orig[idx].addr, wiov->orig[idx].len);
             wiov_item_reset(wiov, idx);
         }
         else {

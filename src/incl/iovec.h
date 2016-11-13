@@ -12,14 +12,18 @@
 
 #include "comm.h"
 
+typedef int (*wiov_send_succ_cb_t)(void *ctx, void *addr, size_t len);
+typedef int (*wiov_send_fail_cb_t)(void *ctx, void *addr, size_t len);
+
 /* IOV原始数据信息 */
 typedef struct
 {
     void *addr;                         /* 起始地址 */
     size_t len;                         /* 原始长度 */
 
-    void *pool;                         /* 所属内存池 */
-    mem_dealloc_cb_t dealloc;           /* 内存释放回调 */
+    void *param;                        /* 附加参数 */
+    wiov_send_succ_cb_t succ;           /* 发送成功处理回调 */
+    wiov_send_fail_cb_t fail;           /* 发送失败处理回调 */
 } wiov_orig_t;
 
 /* IOV对象(写) */
@@ -43,7 +47,7 @@ void wiov_destroy(wiov_t *wiov);
 #define wiov_item_num(wiov) ((wiov)->iov_cnt - (wiov)->iov_idx)
 
 /* 添加发送内容 */
-#define wiov_item_add(wiov, _addr, _len, _pool, _dealloc) \
+#define wiov_item_add(wiov, _addr, _len, _param, _succ, _fail) \
 { \
     (wiov)->iov[(wiov)->iov_cnt].iov_len = (_len); \
     (wiov)->iov[(wiov)->iov_cnt].iov_base = (char *)(_addr); \
@@ -51,8 +55,9 @@ void wiov_destroy(wiov_t *wiov);
     (wiov)->orig[(wiov)->iov_cnt].len = (_len); \
     (wiov)->orig[(wiov)->iov_cnt].addr = (char *)(_addr); \
     \
-    (wiov)->orig[(wiov)->iov_cnt].pool = (void *)(_pool); \
-    (wiov)->orig[(wiov)->iov_cnt].dealloc = (mem_dealloc_cb_t)_dealloc; \
+    (wiov)->orig[(wiov)->iov_cnt].param = (void *)(_param); \
+    (wiov)->orig[(wiov)->iov_cnt].succ = (wiov_send_succ_cb_t)(_succ); \
+    (wiov)->orig[(wiov)->iov_cnt].fail = (wiov_send_fail_cb_t)(_fail); \
     \
     ++(wiov)->iov_cnt; \
 }
@@ -65,8 +70,9 @@ void wiov_destroy(wiov_t *wiov);
     \
     (wiov)->orig[idx].len = 0; \
     (wiov)->orig[idx].addr = NULL; \
-    (wiov)->orig[idx].pool = NULL; \
-    (wiov)->orig[idx].dealloc = NULL; \
+    (wiov)->orig[idx].param = NULL; \
+    (wiov)->orig[idx].succ = NULL; \
+    (wiov)->orig[idx].fail = NULL; \
     \
 }
 
