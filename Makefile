@@ -35,6 +35,7 @@ DIR += "$(LIB_DIR)/gumbo"
 DIR += "$(LIB_DIR)/redis"
 
 DIR += "$(LIB_DIR)/agent"
+DIR += "$(LIB_DIR)/access"
 DIR += "$(LIB_DIR)/invert"
 
 DEMO_DIR = "src/demo"
