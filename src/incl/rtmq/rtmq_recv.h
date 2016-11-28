@@ -175,6 +175,8 @@ int rtmq_sub_query(rtmq_cntx_t *ctx, uint32_t type);
 int rtmq_async_send(rtmq_cntx_t *ctx, int type, int dest, void *data, size_t len);
 
 /* 内部接口 */
+bool rtmq_conf_isvalid(const rtmq_conf_t *conf);
+
 int rtmq_lsn_init(rtmq_cntx_t *ctx);
 void *rtmq_lsn_routine(void *_ctx);
 int rtmq_lsn_destroy(rtmq_listen_t *lsn);

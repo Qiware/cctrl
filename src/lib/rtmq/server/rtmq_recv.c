@@ -57,6 +57,12 @@ rtmq_cntx_t *rtmq_init(const rtmq_conf_t *cf, log_cycle_t *log)
     rtmq_conf_t *conf;
     char path[FILE_NAME_MAX_LEN];
 
+    /* > 校验配置合法性 */
+    if (!rtmq_conf_isvalid(cf)) {
+        log_error(log, "Configuration isn't invalid!");
+        return NULL;
+    }
+
     /* > 创建全局对象 */
     ctx = (rtmq_cntx_t *)calloc(1, sizeof(rtmq_cntx_t));
     if (NULL == ctx) {
@@ -391,7 +397,7 @@ static int rtmq_creat_distq(rtmq_cntx_t *ctx)
 
     /* > 依次创建队列 */
     for (idx=0; idx<conf->distq_num; ++idx) {
-        ctx->distq[idx] = ring_creat(conf->sendq.max);
+        ctx->distq[idx] = ring_creat(conf->distq.max);
         if (NULL == ctx->distq[idx]) {
             log_error(ctx->log, "Create queue failed!");
             return RTMQ_ERR;
@@ -400,8 +406,6 @@ static int rtmq_creat_distq(rtmq_cntx_t *ctx)
 
     return RTMQ_OK;
 }
-
-
 
 /******************************************************************************
  **函数名称: rtmq_creat_recvs

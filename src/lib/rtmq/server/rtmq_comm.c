@@ -3,6 +3,35 @@
 #include "rtmq_recv.h"
 
 /******************************************************************************
+ **函数名称: rtmq_conf_isvalid
+ **功    能: 校验配置合法性
+ **输入参数:
+ **     conf: 配置数据
+ **输出参数: NONE
+ **返    回: true:合法 false:非法
+ **实现描述:
+ **注意事项:
+ **作    者: # Qifeng.zou # 2016.11.28 16:20:40 #
+ ******************************************************************************/
+bool rtmq_conf_isvalid(const rtmq_conf_t *conf)
+{
+    if ((0 == conf->nid)
+        || (0 == strlen(conf->path))
+        || (NULL == conf->auth)
+        || ((0 == conf->port) || (conf->port > 65535))
+        || (0 == conf->recv_thd_num)
+        || (0 == conf->work_thd_num)
+        || (0 == conf->recvq_num)
+        || (0 == conf->distq_num)
+        || ((0 == conf->recvq.max) || (0 == conf->recvq.size))
+        || ((0 == conf->sendq.max) || (0 == conf->sendq.size))
+        || ((0 == conf->distq.max) || (0 == conf->distq.size))) {
+        return false;
+    }
+    return true;
+}
+
+/******************************************************************************
  **函数名称: rtmq_cmd_to_rsvr
  **功    能: 发送命令到指定的接收线程
  **输入参数:

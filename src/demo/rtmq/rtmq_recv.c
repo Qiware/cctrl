@@ -7,7 +7,13 @@
 /* 回调函数 */
 static int rtmq_work_def_hdl(int type, int nid, char *buff, size_t len, void *args)
 {
-    fprintf(stderr, "type:%d nid:%d buff:%p len:%ld args:%p\n", type, nid, buff, len, args);
+    char mesg[1024];
+
+    memset(mesg, 0, sizeof(mesg));
+
+    strncpy(mesg, buff, sizeof(mesg)-1>len?len:sizeof(mesg)-1);
+
+    fprintf(stderr, "type:%d nid:%d buff:[%s] len:%ld args:%p\n", type, nid, mesg, len, args);
     return 0;
 }
 
@@ -17,6 +23,7 @@ static void rtmq_setup_conf(rtmq_conf_t *conf, int port)
     rtmq_auth_t *auth;
     snprintf(conf->path, sizeof(conf->path), "./");
 
+    conf->nid = 20000;
     conf->port = port;
     conf->recv_thd_num = 1;
     conf->work_thd_num = 1;
@@ -26,6 +33,9 @@ static void rtmq_setup_conf(rtmq_conf_t *conf, int port)
     conf->distq_num = 3;
     conf->distq.max = 1024;
     conf->distq.size = 40960;
+    conf->sendq.max = 1024;
+    conf->sendq.size = 40960;
+ 
 
     conf->auth = list_creat(NULL);
 
