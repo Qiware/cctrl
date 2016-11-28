@@ -5,6 +5,7 @@
 #include "search.h"
 #include "mem_ref.h"
 #include "syscall.h"
+#include "test_mesg.h"
 #include "rtmq_proxy.h"
 
 #define __RTMQ_DEBUG_SEND__
@@ -31,7 +32,7 @@ int rtmq_send_debug(rtmq_proxy_t *ctx, int secs)
     struct timeval stime, etime;
     int total = 0, fails = 0;
     char data[SIZE];
-    mesg_search_word_req_t *req;
+    mesg_search_req_t *req;
 
     for (;;) {
         gettimeofday(&stime, NULL);
@@ -39,11 +40,11 @@ int rtmq_send_debug(rtmq_proxy_t *ctx, int secs)
         fails = 0;
         total = 0;
         for (idx=0; idx<LOOP; idx++) {
-            req = (mesg_search_word_req_t *)data;
+            req = (mesg_search_req_t *)data;
 
             snprintf(req->words, sizeof(req->words), "%s", "BAIDU");
 
-            if (rtmq_proxy_async_send(ctx, MSG_SEARCH_REQ, req, sizeof(mesg_search_word_req_t))) {
+            if (rtmq_proxy_async_send(ctx, MSG_SEARCH_REQ, req, sizeof(mesg_search_req_t))) {
                 idx--;
                 usleep(2);
                 sleep2 += USLEEP*1000000;

@@ -47,7 +47,6 @@ $(OBJS2): %.o : %.c $(HEADS)
 	@$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDE)
 	@echo "CC $(PWD)/$<"
 
-
 clean:
 	@rm -fr *.o $(PROJ_BIN)/$(TARGET) $(PROJ_BIN)/$(TARGET2)
 	@echo "rm -fr *.o $(PROJ_BIN)/$(TARGET) $(PROJ)/$(TARGET2)"

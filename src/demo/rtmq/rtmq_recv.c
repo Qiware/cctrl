@@ -1,6 +1,7 @@
 #include "mesg.h"
 #include "search.h"
 #include "mem_ref.h"
+#include "test_mesg.h"
 #include "rtmq_recv.h"
 
 /* 回调函数 */
