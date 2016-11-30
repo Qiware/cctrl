@@ -38,7 +38,7 @@ static int acc_send_cmd_to_rsvr(acc_cntx_t *ctx, int rid, int cmd_id)
  **     ctx: 全局对象
  **     type: 数据类型
  **     cid: 连接ID(Connection ID)
- **     data: 数据内容(必须包含消息头: mesg_header_t)
+ **     data: 数据内容
  **     len: 数据长度
  **输出参数:
  **返    回: 发送队列的索引
@@ -50,18 +50,8 @@ static int acc_send_cmd_to_rsvr(acc_cntx_t *ctx, int rid, int cmd_id)
 int acc_async_send(acc_cntx_t *ctx, int type, uint64_t cid, void *data, int len)
 {
     int rid; // rsvr id
-    void *addr;
     ring_t *sendq;
-    mesg_header_t *head = (mesg_header_t *)data, hhead;
-
-    /* > 合法性校验 */
-    MESG_HEAD_NTOH(head, &hhead);
-    if (!MESG_CHKSUM_ISVALID(&hhead)) {
-        log_error(ctx->log, "Data format is invalid! cid:%lu", cid);
-        return ACC_ERR;
-    }
-
-    MESG_HEAD_PRINT(ctx->log, &hhead);
+    acc_send_item_t *item;
 
     /* > 通过cid获取服务ID */
     rid = acc_get_rid_by_cid(ctx, cid);
@@ -70,19 +60,30 @@ int acc_async_send(acc_cntx_t *ctx, int type, uint64_t cid, void *data, int len)
         return ACC_ERR;
     }
 
-    /* > 放入指定发送队列 */
+    /* > 准备存储空间 */
     sendq = ctx->sendq[rid];
 
-    addr = (void *)calloc(1, len);
-    if (NULL == addr) {
+    item = (void *)calloc(1, sizeof(acc_send_item_t));
+    if (NULL == item) {
         log_error(ctx->log, "Alloc memory failed! len:%d", len);
         return ACC_ERR;
     }
 
-    memcpy(addr, data, len);
+    item->data = (void *)calloc(1, len);
+    if (NULL == item->data) {
+        log_error(ctx->log, "Alloc memory failed! len:%d", len);
+        free(item);
+        return ACC_ERR;
+    }
 
-    if (ring_push(sendq, addr)) { /* 放入队列 */
-        FREE(addr);
+    item->cid = cid;
+    item->len = len;
+    memcpy(item->data, data, len);
+
+    /* > 放入发送队列 */
+    if (ring_push(sendq, item)) {
+        FREE(item->data);
+        FREE(item);
         log_error(ctx->log, "Push into ring failed!");
         return ACC_ERR;
     }

@@ -61,6 +61,14 @@ typedef struct
     void *args;                     /* 附加参数 */
 } acc_protocol_t;
 
+/* 发送项 */
+typedef struct
+{
+    uint64_t cid;                   /* 连接ID */
+    int len;                        /* 发送长度 */
+    void *data;                     /* 发送内容 */
+} acc_send_item_t;
+
 /* 代理对象 */
 typedef struct _acc_cntx_t {
     acc_conf_t *conf;               /* 配置信息 */

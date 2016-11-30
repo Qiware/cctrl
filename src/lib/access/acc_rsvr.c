@@ -837,7 +837,7 @@ static int acc_recv_data(acc_cntx_t *ctx, acc_rsvr_t *rsvr, socket_t *sck)
 static int acc_send_data(acc_cntx_t *ctx, acc_rsvr_t *rsvr, socket_t *sck)
 {
     int n, left;
-    mesg_header_t *head, hhead;
+    acc_send_item_t *item;
     struct epoll_event ev;
     socket_snap_t *send = &sck->send;
     acc_socket_extra_t *extra = (acc_socket_extra_t *)sck->extra;
@@ -847,20 +847,17 @@ static int acc_send_data(acc_cntx_t *ctx, acc_rsvr_t *rsvr, socket_t *sck)
     for (;;) {
         /* 1. 取发送的数据 */
         if (NULL == send->addr) {
-            send->addr = list_lpop(extra->send_list);
-            if (NULL == send->addr) {
+            item = list_lpop(extra->send_list);
+            if (NULL == item) {
                 return ACC_OK; /* 无数据 */
             }
 
-            head = (mesg_header_t *)send->addr;
-
-            MESG_HEAD_NTOH(head, &hhead);
-            MESG_HEAD_PRINT(rsvr->log, &hhead);
-
+            send->addr = item->data;
             send->off = 0;
-            send->total = hhead.length + sizeof(mesg_header_t);
+            send->total = item->len;
 
-            log_trace(rsvr->log, "sid:%lu serial:%lu!", hhead.sid, hhead.serial);
+            log_trace(rsvr->log, "cid:%lu!", item->cid);
+            free(item);
         }
 
         /* 2. 发送数据 */
@@ -915,7 +912,7 @@ static int acc_rsvr_dist_send_data(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
     int num, idx;
     ring_t *sendq;
     socket_t *sck;
-    mesg_header_t *head, hhead;
+    acc_send_item_t *item;
     struct epoll_event ev;
     void *addr[AGT_RSVR_DIST_POP_NUM];
 
@@ -935,21 +932,12 @@ static int acc_rsvr_dist_send_data(acc_cntx_t *ctx, acc_rsvr_t *rsvr)
         log_debug(rsvr->log, "Pop data succ! num:%d", num);
 
         for (idx=0; idx<num; ++idx) {
-            head = (mesg_header_t *)addr[idx];  // 消息头
-
-            MESG_HEAD_NTOH(head, &hhead);       // 字节序转换
-            if (!MESG_CHKSUM_ISVALID(&hhead)) {
-                log_error(ctx->log, "Check chksum [0x%X/0x%X] failed! sid:%lu serial:%lu",
-                        hhead.chksum, MSG_CHKSUM_VAL, hhead.sid, hhead.serial);
-                FREE(addr[idx]);
-                continue;
-            }
+            item = (acc_send_item_t *)addr[idx];
 
             /* > 发入发送列表 */
-            sck = acc_push_into_send_list(ctx, rsvr, hhead.sid, addr[idx]); 
+            sck = acc_push_into_send_list(ctx, rsvr, item->cid, addr[idx]); 
             if (NULL == sck) {
-                log_error(ctx->log, "Query socket failed! serial:%lu sid:%lu",
-                        hhead.serial, hhead.sid);
+                log_error(ctx->log, "Query socket failed! cid:%lu", item->cid);
                 FREE(addr[idx]);
                 continue;
             }
@@ -992,6 +980,7 @@ static socket_t *acc_push_into_send_list(
 
     extra = hash_tab_query(ctx->conn_cid_tab, &key, WRLOCK);
     if (NULL == extra) {
+        log_error(ctx->log, "Query connection by cid failed! cid:%lu", cid);
         return NULL;
     }
 
@@ -1000,6 +989,7 @@ static socket_t *acc_push_into_send_list(
     /* > 放入发送列表 */
     if (list_rpush(extra->send_list, addr)) {
         hash_tab_unlock(ctx->conn_cid_tab, &key, WRLOCK);
+        log_error(ctx->log, "Push data into send list failed! cid:%lu", cid);
         return NULL;
     }
 
