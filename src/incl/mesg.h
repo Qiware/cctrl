@@ -27,7 +27,7 @@ typedef struct
 
     uint64_t serial;                    /* 流水号(注: 全局唯一流水号) */
     char body[0];                       /* 消息体 */
-} mesg_header_t;
+}__attribute__ ((__packed__))mesg_header_t;
 
 /* 字节序转换 */
 #define MESG_HEAD_HTON(h, n) do { /* 主机->网络 */\
