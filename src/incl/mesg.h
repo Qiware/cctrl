@@ -64,8 +64,8 @@ typedef struct
 #define MESG_CHKSUM_ISVALID(head) (MSG_CHKSUM_VAL == (head)->chksum)
 
 #define MESG_HEAD_PRINT(log, head) \
-    log_debug((log), "Call %s()! type:%d len:%d chksum:0x%X/0x%X sid:%lu nid:%u serial:%lu", \
-            __func__, (head)->type, (head)->length, (head)->chksum, MSG_CHKSUM_VAL, \
+    log_debug((log), "type:0x%04X len:%d chksum:0x%X/0x%X sid:%lu nid:%u serial:%lu", \
+            (head)->type, (head)->length, (head)->chksum, MSG_CHKSUM_VAL, \
             (head)->sid, (head)->nid, (head)->serial);
 
 #endif /*__MESG_H__*/
