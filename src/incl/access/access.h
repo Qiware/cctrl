@@ -33,10 +33,12 @@ typedef struct {
     int nid;                        /* 结点ID */
     char path[FILE_NAME_MAX_LEN];   /* 工作路径 */
 
+    char ipaddr[IP_ADDR_MAX_LEN];   /* 外网IP */
+    int port;                       /* 侦听端口 */
+
     struct {
         int max;                    /* 最大并发数 */
         int timeout;                /* 连接超时时间 */
-        int port;                   /* 侦听端口 */
     } connections;
 
     int lsvr_num;                   /* 帧听线程数 */

@@ -611,18 +611,14 @@ static int rtmq_proxy_ssvr_proc_cmd(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr, 
     switch (cmd->type) {
         case RTMQ_CMD_SEND:
         case RTMQ_CMD_SEND_ALL:
-        {
-            log_debug(ssvr->log, "Recv command! type:[%d]", cmd->type);
+            log_debug(ssvr->log, "Recv command! type:[0x%04X]", cmd->type);
             if (fd_is_writable(sck->fd)) {
                 return rtmq_proxy_ssvr_send_data(pxy, ssvr);
             }
             return RTMQ_OK;
-        }
         default:
-        {
             log_error(ssvr->log, "Unknown command! type:[%d]", cmd->type);
             return RTMQ_OK;
-        }
     }
     return RTMQ_OK;
 }

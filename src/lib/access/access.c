@@ -221,10 +221,10 @@ static int acc_creat_lsvr(acc_cntx_t *ctx)
     acc_conf_t *conf = ctx->conf;
 
     /* > 侦听指定端口 */
-    ctx->listen.lsn_sck_id = tcp_listen(conf->connections.port);
+    ctx->listen.lsn_sck_id = tcp_listen(conf->port);
     if (ctx->listen.lsn_sck_id < 0) {
         log_error(ctx->log, "errmsg:[%d] %s! port:%d",
-                  errno, strerror(errno), conf->connections.port);
+                  errno, strerror(errno), conf->port);
         return ACC_ERR;
     }
 
