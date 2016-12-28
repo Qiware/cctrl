@@ -319,7 +319,7 @@ static int timer_task_timeout(timer_cntx_t *ctx)
 ////////////////////////////////////////////////////////////////////////////////
 
 /******************************************************************************
- **函数名称: timer_routine
+ **函数名称: timer_task_routine
  **功    能: 定时任务处理
  **输入参数:
  **     task: 定时任务
@@ -329,7 +329,7 @@ static int timer_task_timeout(timer_cntx_t *ctx)
  **注意事项: 
  **作    者: # Qifeng.zou # 2016.12.28 19:46:43 #
  ******************************************************************************/
-void *timer_routine(void *_ctx)
+void *timer_task_routine(void *_ctx)
 {
     int ret;
     timer_task_t *task;

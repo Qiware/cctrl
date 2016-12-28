@@ -38,5 +38,6 @@ int timer_task_add(timer_cntx_t *ctx, timer_task_t *task);
 int timer_task_earse(timer_cntx_t *ctx, timer_task_t *task);
 int timer_task_update(timer_task_t *task,
         void (*proc)(void *param), int start, int interval, void *param);
+void *timer_task_routine(void *_ctx);
 
 #endif /*__TIMER_H__*/
