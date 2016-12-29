@@ -353,17 +353,19 @@ void *timer_task_routine(void *_ctx)
 
         ret = select(0, NULL, NULL, NULL, &timeout);
         if (0 == ret) {
-            task = timer_task_pop(ctx);
-            if (NULL == task) {
-                continue;
+            while (!timer_task_timeout(ctx)) {
+                task = timer_task_pop(ctx);
+                if (NULL == task) {
+                    break;
+                }
+
+                task->proc(task->param);
+
+                ++task->times;
+                task->ttl = time(NULL) + task->interval;
+
+                timer_task_add(ctx, task);
             }
-
-            task->proc(task->param);
-            ++task->times;
-            task->ttl = time(NULL) + task->interval;
-            //fprintf(stderr, "%s: task:%p ttl:%lu times:%lu\n", __func__, task, task->ttl, task->times);
-
-            timer_task_add(ctx, task);
         }
     }
 
