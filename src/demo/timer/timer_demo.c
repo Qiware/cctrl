@@ -33,6 +33,10 @@ int main(void)
         timer_task_add(timer, &task[idx]);
     }
 
+    for (idx=2; idx<5; idx+=1) {
+        timer_task_del(timer, &task[idx]);
+    }
+
     timer_task_routine((void *)timer);
 
     return 0;

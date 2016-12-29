@@ -192,7 +192,7 @@ timer_task_t *timer_task_pop(timer_cntx_t *ctx)
 }
 
 /******************************************************************************
- **函数名称: timer_task_earse
+ **函数名称: timer_task_del
  **功    能: 删除某个定时任务
  **输入参数:
  **     ctx: 上下文对象
@@ -203,12 +203,21 @@ timer_task_t *timer_task_pop(timer_cntx_t *ctx)
  **注意事项: 外部需要主动释放内存空间, 否则存在内存泄露的可能性
  **作    者: # Qifeng.zou # 2016.12.28 16:04:41 #
  ******************************************************************************/
-int timer_task_earse(timer_cntx_t *ctx, timer_task_t *task)
+int timer_task_del(timer_cntx_t *ctx, timer_task_t *task)
 {
     timer_task_t *item;
     int idx, left, right, min;
 
     pthread_rwlock_wrlock(&ctx->lock);
+
+    if (task->idx >= ctx->len) {
+        pthread_rwlock_unlock(&ctx->lock);
+        return -1;
+    }
+    else if (task != (timer_task_t *)ctx->e[task->idx]) {
+        pthread_rwlock_unlock(&ctx->lock);
+        return -1;
+    }
 
     idx = task->idx;
     if (0 == idx) {
@@ -221,7 +230,7 @@ int timer_task_earse(timer_cntx_t *ctx, timer_task_t *task)
     }
 
     /* 将堆最后一个元素填补被删除的元素 */
-    item = (timer_task_t *)(ctx->e[ctx->len - 1]);
+    item = (timer_task_t *)(ctx->e[--ctx->len]);
 
     /* 再从被删元素处开始调整堆的结构 */
     while (1) {
@@ -275,7 +284,7 @@ int timer_task_update(timer_task_t *task,
     timer_cntx_t *ctx = task->ctx;
 
     /* > 先将该任务从堆中踢除 */
-    timer_task_earse(ctx, task);
+    timer_task_del(ctx, task);
 
     /* > 然后重新设置其相关数据 */
     timer_task_init(task, proc, start, interval, param);
