@@ -33,8 +33,12 @@ int main(void)
         timer_task_add(timer, &task[idx]);
     }
 
-    for (idx=2; idx<5; idx+=1) {
+    for (idx=3; idx<5; idx+=1) {
         timer_task_del(timer, &task[idx]);
+    }
+
+    for (idx=5; idx<7; idx+=1) {
+        timer_task_update(&task[idx], proc, 2, 5, (void *)((uint64_t)idx));
     }
 
     timer_task_routine((void *)timer);
