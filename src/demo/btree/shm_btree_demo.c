@@ -1,3 +1,4 @@
+#include "log.h"
 #include "comm.h"
 #include "shm_btree.h"
 
@@ -20,7 +21,7 @@ int main(void)
     }
 
     /* > 创建B树 */
-    ctx = shm_btree_creat("test.bt", BTREE_M, 32 * MB, log);
+    ctx = shm_btree_creat("test.bt", BTREE_M, 32 * MB);
     if (NULL == ctx) {
         fprintf(stderr, "[%s][%d] Create btree failed!\n", __FILE__, __LINE__);
         return -1;

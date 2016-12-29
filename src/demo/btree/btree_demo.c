@@ -1,3 +1,4 @@
+#include "log.h"
 #include "btree.h"
 
 #define BTREE_M     (3)
