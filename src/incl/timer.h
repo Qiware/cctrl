@@ -28,6 +28,7 @@ typedef struct
     int interval;           /* 间隔时间 */
     void *param;            /* 附加参数 */
 
+    uint64_t times;         /* 已执行次数 */
     time_t ttl;             /* 下次执行时间 */
 } timer_task_t;
 

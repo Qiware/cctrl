@@ -64,9 +64,10 @@ int timer_task_init(timer_task_t *task,
 
     task->proc = proc;          /* 定时回调 */
     task->start = start;        /* 开始时间 */
-    task->interval = interval;   /* 间隔时间 */
+    task->interval = interval;  /* 间隔时间 */
     task->param = param;        /* 附加参数 */
 
+    task->times = 0;            /* 已执行次数 */
     task->ttl = ctm + start;    /* 下次执行时间 */
 
     return 0;
@@ -107,6 +108,7 @@ int timer_task_add(timer_cntx_t *ctx, timer_task_t *task)
 
     if (0 == ctx->len) {
         ctx->e[ctx->len++] = task;
+        task->idx = 0;
         pthread_rwlock_unlock(&ctx->lock);
         return 0;
     }
@@ -115,13 +117,14 @@ int timer_task_add(timer_cntx_t *ctx, timer_task_t *task)
     idx = ctx->len;
     parent = idx / 2;
 
-    while (ctx->cmp(ctx->e[parent], task) > 0) {
+    while ((idx != parent) && (ctx->cmp(ctx->e[parent], task) > 0)) {
         ctx->e[idx] = ctx->e[parent];
         idx = parent;
         parent = idx / 2;
     }
 
     ctx->e[idx] = (void *)task;
+    task->idx = idx;
     ++ctx->len;
 
     pthread_rwlock_unlock(&ctx->lock);
@@ -308,7 +311,7 @@ static int timer_task_timeout(timer_cntx_t *ctx)
     }
 
     task = (timer_task_t *)(ctx->e[0]);
-    timeout = (ctm < task->ttl)? 0 : task->ttl - ctm;
+    timeout = (ctm < task->ttl)? task->ttl - ctm : 0;
 
     pthread_rwlock_unlock(&ctx->lock);
 
@@ -347,7 +350,9 @@ void *timer_task_routine(void *_ctx)
             }
 
             task->proc(task->param);
+            ++task->times;
             task->ttl = time(NULL) + task->interval;
+            //fprintf(stderr, "%s: task:%p ttl:%lu times:%lu\n", __func__, task, task->ttl, task->times);
 
             timer_task_add(ctx, task);
         }
