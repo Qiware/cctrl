@@ -1,6 +1,5 @@
-#include <sys/select.h>
-
 #include "comm.h"
+#include "redo.h"
 #include "timer.h"
 
 static int timer_item_cmp_cb(timer_task_t *item1, timer_task_t *item2)
@@ -296,8 +295,8 @@ int timer_task_update(timer_task_t *task,
 }
 
 /******************************************************************************
- **函数名称: timer_task_timeout
- **功    能: 最近超时的任务
+ **函数名称: timer_task_is_timeout
+ **功    能: 是否存在超时任务
  **输入参数:
  **     ctx: 堆对象
  **输出参数: NONE
@@ -306,7 +305,7 @@ int timer_task_update(timer_task_t *task,
  **注意事项:
  **作    者: # Qifeng.zou # 2016.12.28 20:06:45 #
  ******************************************************************************/
-static int timer_task_timeout(timer_cntx_t *ctx)
+static bool timer_task_is_timeout(timer_cntx_t *ctx)
 {
     int timeout;
     timer_task_t *task;
@@ -316,7 +315,7 @@ static int timer_task_timeout(timer_cntx_t *ctx)
 
     if (0 == ctx->len) {
         pthread_rwlock_unlock(&ctx->lock);
-        return 1;
+        return false;
     }
 
     task = (timer_task_t *)(ctx->e[0]);
@@ -324,7 +323,7 @@ static int timer_task_timeout(timer_cntx_t *ctx)
 
     pthread_rwlock_unlock(&ctx->lock);
 
-    return timeout;
+    return (timeout > 0)? false : true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -337,36 +336,31 @@ static int timer_task_timeout(timer_cntx_t *ctx)
  **     task: 定时任务
  **输出参数:
  **返    回: VOID
- **实现描述: 
+ **实现描述: 睡眠过程中可能有新添加的定时任务, 为防止新任务超时后长时间得不到处
+ **          理, 因此, 每次睡眠时间为1秒.
  **注意事项: 
  **作    者: # Qifeng.zou # 2016.12.28 19:46:43 #
  ******************************************************************************/
 void *timer_task_routine(void *_ctx)
 {
-    int ret;
     timer_task_t *task;
-    struct timeval timeout;
     timer_cntx_t *ctx = (timer_cntx_t *)_ctx;
 
     for (;;) {
-        timeout.tv_sec = timer_task_timeout(ctx);
-
-        ret = select(0, NULL, NULL, NULL, &timeout);
-        if (0 == ret) {
-            while (!timer_task_timeout(ctx)) {
-                task = timer_task_pop(ctx);
-                if (NULL == task) {
-                    break;
-                }
-
-                task->proc(task->param);
-
-                ++task->times;
-                task->ttl = time(NULL) + task->interval;
-
-                timer_task_add(ctx, task);
+        while (timer_task_is_timeout(ctx)) {
+            task = timer_task_pop(ctx);
+            if (NULL == task) {
+                break;
             }
+
+            task->proc(task->param);
+
+            ++task->times;
+            task->ttl = time(NULL) + task->interval;
+
+            timer_task_add(ctx, task);
         }
+        Sleep(1);
     }
 
     return NULL;
