@@ -52,8 +52,9 @@ timer_cntx_t *timer_cntx_init(void)
  **输出参数: NONE
  **返    回: 上下文对象
  **实现描述:
- **注意事项: 完成定时任务的初始化之后, 还需要调用timer_task_add()将定时任务加入
- **          执行流程.
+ **注意事项:
+ **     1. 完成定时任务的初始化之后, 还需要调用timer_task_add()将定时任务加入执行流程.
+ **     2. 间隔时间不能为0.
  **作    者: # Qifeng.zou # 2016.12.28 16:04:41 #
  ******************************************************************************/
 int timer_task_init(timer_task_t *task,
@@ -63,7 +64,7 @@ int timer_task_init(timer_task_t *task,
 
     task->proc = proc;          /* 定时回调 */
     task->start = start;        /* 开始时间 */
-    task->interval = interval;  /* 间隔时间 */
+    task->interval = interval? interval : 1;  /* 间隔时间 */
     task->param = param;        /* 附加参数 */
 
     task->times = 0;            /* 已执行次数 */
