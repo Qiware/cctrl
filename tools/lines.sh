@@ -1,9 +1,8 @@
 #!/bin/sh
 
 # 设置统计目录
-DIR="../../src"
-SRC="$DIR/exec"
-SRC="$SRC $DIR/demo"
+DIR="../src"
+SRC="$DIR/demo"
 SRC="$SRC $DIR/incl"
 SRC="$SRC $DIR/lib/"
 

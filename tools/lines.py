@@ -8,9 +8,8 @@ import sys
 # 设置统计路径
 def set_dir_list():
     dir_list = []
-    path = "../../src"
+    path = "../src"
 
-    dir_list.append(path + "/exec")
     dir_list.append(path + "/demo")
     dir_list.append(path + "/incl")
     dir_list.append(path + "/lib")
