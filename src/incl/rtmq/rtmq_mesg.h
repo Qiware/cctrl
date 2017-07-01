@@ -13,16 +13,14 @@ typedef enum
 {
     RTMQ_CMD_UNKNOWN                    = 0x0000  /* 未知命令 */
 
-    , RTMQ_CMD_LINK_AUTH_REQ            = 0x0001  /* 链路鉴权请求 */
-    , RTMQ_CMD_LINK_AUTH_RSP            = 0x0002  /* 链路鉴权应答 */
+    , RTMQ_CMD_AUTH_REQ                 = 0x0001  /* 链路鉴权请求 */
+    , RTMQ_CMD_AUTH_ACK                 = 0x0002  /* 链路鉴权应答 */
 
     , RTMQ_CMD_KPALIVE_REQ              = 0x0003  /* 链路保活请求 */
-    , RTMQ_CMD_KPALIVE_RSP              = 0x0004  /* 链路保活应答 */
+    , RTMQ_CMD_KPALIVE_ACK              = 0x0004  /* 链路保活应答 */
 
-    , RTMQ_CMD_SUB_ONE_REQ              = 0x0005  /* 订阅请求: 将消息只发送给一个用户 */
-    , RTMQ_CMD_SUB_ONE_RSP              = 0x0006  /* 订阅应答 */
-    , RTMQ_CMD_SUB_ALL_REQ              = 0x0007  /* 订阅请求: 将消息发送给所有用户 */
-    , RTMQ_CMD_SUB_ALL_RSP              = 0x0008  /* 订阅应答 */
+    , RTMQ_CMD_SUB_REQ                  = 0x0005  /* 订阅请求: 将消息只发送给一个用户 */
+    , RTMQ_CMD_SUB_ACK                  = 0x0006  /* 订阅应答 */
 
     , RTMQ_CMD_ADD_SCK                  = 0x0009  /* 接收客户端数据-请求 */
     , RTMQ_CMD_DIST_REQ                 = 0x000A  /* 分发任务请求 */
@@ -32,11 +30,11 @@ typedef enum
 
     /* 查询命令 */
     , RTMQ_CMD_QUERY_CONF_REQ           = 0x1001  /* 查询配置信息-请求 */
-    , RTMQ_CMD_QUERY_CONF_REP           = 0x1002  /* 查询配置信息-应答 */
+    , RTMQ_CMD_QUERY_CONF_ACK           = 0x1002  /* 查询配置信息-应答 */
     , RTMQ_CMD_QUERY_RECV_STAT_REQ      = 0x1003  /* 查询接收状态-请求 */
-    , RTMQ_CMD_QUERY_RECV_STAT_REP      = 0x1004  /* 查询接收状态-应答 */
+    , RTMQ_CMD_QUERY_RECV_STAT_ACK      = 0x1004  /* 查询接收状态-应答 */
     , RTMQ_CMD_QUERY_PROC_STAT_REQ      = 0x1005  /* 查询处理状态-请求 */
-    , RTMQ_CMD_QUERY_PROC_STAT_REP      = 0x1006  /* 查询处理状态-应答 */
+    , RTMQ_CMD_QUERY_PROC_STAT_ACK      = 0x1006  /* 查询处理状态-应答 */
 } rtmq_mesg_e;
 
 /* 报头结构 */
@@ -79,9 +77,18 @@ typedef struct
 /* 链路鉴权请求 */
 typedef struct
 {
+    uint32_t gid;                       /* 分组ID */
     char usr[RTMQ_USR_MAX_LEN];         /* 用户名 */
     char passwd[RTMQ_PWD_MAX_LEN];      /* 登录密码 */
 } rtmq_link_auth_req_t;
+
+#define RTMQ_AUTH_REQ_HTON(n, h) do {   /* 主机 -> 网络 */\
+    (n)->gid = htonl((h)->gid); \
+} while(0)
+
+#define RTMQ_AUTH_REQ_NTOH(h, n) do {   /* 网络 -> 主机 */\
+    (n)->gid = ntohl((h)->gid); \
+} while(0)
 
 /* 链路鉴权应答 */
 typedef struct
@@ -89,7 +96,7 @@ typedef struct
 #define RTMQ_LINK_AUTH_FAIL     (0)
 #define RTMQ_LINK_AUTH_SUCC     (1)
     int is_succ;                        /* 应答码(0:失败 1:成功) */
-} rtmq_link_auth_rsp_t;
+} rtmq_link_auth_ack_t;
 
 /* 订阅请求 */
 typedef struct

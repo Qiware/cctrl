@@ -26,7 +26,7 @@ static int rtmq_proxy_ssvr_clear_mesg(rtmq_proxy_ssvr_t *ssvr);
 static int rtmq_proxy_ssvr_kpalive_req(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr);
 
 static int rtmq_link_auth_req(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr);
-static int rtmq_link_auth_rsp_hdl(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr, rtmq_proxy_sct_t *sck, rtmq_link_auth_rsp_t *rsp);
+static int rtmq_link_auth_ack_hdl(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr, rtmq_proxy_sct_t *sck, rtmq_link_auth_ack_t *rsp);
 static int rtmq_sub_req(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr);
 
 static int rtmq_proxy_ssvr_cmd_proc_req(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr, int rqid);
@@ -453,7 +453,7 @@ static int rtmq_proxy_ssvr_recv_proc(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr)
             continue;
         }
         else if (0 == n) {
-            log_info(ssvr->log, "Server disconnected. fd:%d n:%d/%d", sck->fd, n, left);
+            log_error(ssvr->log, "Server disconnected. fd:%d n:%d/%d", sck->fd, n, left);
             CLOSE(sck->fd);
             rtmq_snap_reset(recv);
             return RTMQ_SCK_DISCONN;
@@ -537,13 +537,13 @@ static int rtmq_proxy_ssvr_data_proc(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr,
         /* 2.1 转化字节序 */
         RTMQ_HEAD_NTOH(head, head);
 
-        log_trace(ssvr->log, "CheckSum:%u/%u type:%d len:%d flag:%d",
-                head->chksum, RTMQ_CHKSUM_VAL, head->type, head->length, head->flag);
+        log_trace(ssvr->log, "type:0x%04X len:%d flag:%d CheckSum:%u/%u",
+                head->type, head->length, head->flag, head->chksum, RTMQ_CHKSUM_VAL);
 
         /* 2.2 校验合法性 */
         if (!RTMQ_HEAD_ISVALID(head)) {
             ++ssvr->err_total;
-            log_error(ssvr->log, "Header is invalid! CheckSum:%u/%u type:%d len:%d flag:%d",
+            log_error(ssvr->log, "Header is invalid! CheckSum:%u/%u type:0x%04X len:%d flag:%d",
                     head->chksum, RTMQ_CHKSUM_VAL, head->type, head->length, head->flag);
             return RTMQ_ERR;
         }
@@ -811,20 +811,15 @@ static int rtmq_proxy_ssvr_sys_mesg_proc(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *s
     rtmq_header_t *head = (rtmq_header_t *)addr;
 
     switch (head->type) {
-        case RTMQ_CMD_KPALIVE_RSP:      /* 保活应答 */
-        {
-            log_debug(ssvr->log, "Received keepalive respond!");
-
+        case RTMQ_CMD_KPALIVE_ACK:      /* 保活应答 */
+            log_debug(ssvr->log, "Received keepalive ack!");
             rtmq_set_kpalive_stat(sck, RTMQ_KPALIVE_STAT_SUCC);
             return RTMQ_OK;
-        }
-        case RTMQ_CMD_LINK_AUTH_RSP:    /* 链路鉴权应答 */
-        {
-            return rtmq_link_auth_rsp_hdl(pxy, ssvr, sck, addr + sizeof(rtmq_header_t));
-        }
+        case RTMQ_CMD_AUTH_ACK:         /* 链路鉴权应答 */
+            return rtmq_link_auth_ack_hdl(pxy, ssvr, sck, addr + sizeof(rtmq_header_t));
     }
 
-    log_error(ssvr->log, "Unknown type [%d]!", head->type);
+    log_error(ssvr->log, "Unknown type [0x%04X]!", head->type);
     return RTMQ_ERR;
 }
 
@@ -904,8 +899,8 @@ static int rtmq_link_auth_req(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr)
     int size;
     void *addr;
     rtmq_header_t *head;
+    rtmq_link_auth_req_t *auth;
     rtmq_proxy_sct_t *sck = &ssvr->sck;
-    rtmq_link_auth_req_t *link_auth_req;
     rtmq_proxy_conf_t *conf = &pxy->conf;
 
     /* > 申请内存空间 */
@@ -920,17 +915,18 @@ static int rtmq_link_auth_req(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr)
     /* > 设置头部数据 */
     head = (rtmq_header_t *)addr;
 
-    head->type = RTMQ_CMD_LINK_AUTH_REQ;
+    head->type = RTMQ_CMD_AUTH_REQ;
     head->nid = conf->nid;
     head->length = sizeof(rtmq_link_auth_req_t);
     head->flag = RTMQ_SYS_MESG;
     head->chksum = RTMQ_CHKSUM_VAL;
 
     /* > 设置鉴权信息 */
-    link_auth_req = (rtmq_link_auth_req_t *)(head + 1);
+    auth = (rtmq_link_auth_req_t *)(head + 1);
 
-    snprintf(link_auth_req->usr, sizeof(link_auth_req->usr), "%s", pxy->conf.auth.usr);
-    snprintf(link_auth_req->passwd, sizeof(link_auth_req->passwd), "%s", pxy->conf.auth.passwd);
+    auth->gid = htonl(conf->gid);
+    snprintf(auth->usr, sizeof(auth->usr), "%s", pxy->conf.auth.usr);
+    snprintf(auth->passwd, sizeof(auth->passwd), "%s", pxy->conf.auth.passwd);
 
     /* > 加入发送列表 */
     if (list_rpush(sck->mesg_list, addr)) {
@@ -945,7 +941,7 @@ static int rtmq_link_auth_req(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr)
 }
 
 /******************************************************************************
- **函数名称: rtmq_link_auth_rsp_hdl
+ **函数名称: rtmq_link_auth_ack_hdl
  **功    能: 链路鉴权请求应答的处理
  **输入参数:
  **     pxy: 全局信息
@@ -958,8 +954,8 @@ static int rtmq_link_auth_req(rtmq_proxy_t *pxy, rtmq_proxy_ssvr_t *ssvr)
  **注意事项:
  **作    者: # Qifeng.zou # 2015.05.22 #
  ******************************************************************************/
-static int rtmq_link_auth_rsp_hdl(rtmq_proxy_t *pxy,
-        rtmq_proxy_ssvr_t *ssvr, rtmq_proxy_sct_t *sck, rtmq_link_auth_rsp_t *rsp)
+static int rtmq_link_auth_ack_hdl(rtmq_proxy_t *pxy,
+        rtmq_proxy_ssvr_t *ssvr, rtmq_proxy_sct_t *sck, rtmq_link_auth_ack_t *rsp)
 {
     return ntohl(rsp->is_succ)? RTMQ_OK : RTMQ_ERR;
 }
@@ -998,7 +994,7 @@ static int rtmq_add_sub_req(rtmq_reg_t *item, rtmq_proxy_ssvr_t *ssvr)
     /* > 设置头部数据 */
     head = (rtmq_header_t *)addr;
 
-    head->type = RTMQ_CMD_SUB_ONE_REQ;
+    head->type = RTMQ_CMD_SUB_REQ;
     head->nid = conf->nid;
     head->length = sizeof(rtmq_sub_req_t);
     head->flag = RTMQ_SYS_MESG;
@@ -1016,7 +1012,7 @@ static int rtmq_add_sub_req(rtmq_reg_t *item, rtmq_proxy_ssvr_t *ssvr)
         return RTMQ_ERR;
     }
 
-    log_debug(ssvr->log, "Add sub request. type:%d", item->type);
+    log_debug(ssvr->log, "Add sub request. type:0x%04X", item->type);
 
     return RTMQ_OK;
 }
