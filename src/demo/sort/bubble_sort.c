@@ -14,8 +14,7 @@ int bubble_sort(int *array, int num)
 			if(array[j] > array[0]) {
 				array[j-1] = array[0];
 				array[0] = array[j];
-			}
-			else {
+			} else {
 				array[j-1] = array[j];
 				array[j] = array[0];
 			}

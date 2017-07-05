@@ -65,8 +65,7 @@ void *sdsd_worker_routine(void *_ctx)
             log_fatal(worker->log, "errmsg:[%d] %s", errno, strerror(errno));
             abort();
             return (void *)-1;
-        }
-        else if (0 == ret) {
+        } else if (0 == ret) {
             /* 超时: 模拟处理命令 */
             sdtp_cmd_t cmd;
             req = (sdtp_cmd_proc_req_t *)&cmd.args;
@@ -264,9 +263,7 @@ static int sdsd_worker_cmd_proc_req_hdl(sdsd_cntx_t *ctx, sdtp_worker_t *worker,
                         ptr+sizeof(sdtp_header_t), head->length, reg->args))
             {
                 ++worker->err_total;    /* 错误计数 */
-            }
-            else
-            {
+            } else {
                 ++worker->proc_total;   /* 处理计数 */
             }
 

@@ -42,15 +42,13 @@ void *sdrd_worker_routine(void *_ctx)
 
     /* 1. 获取工作对象 */
     worker = sdrd_worker_get_curr(ctx);
-    if (NULL == worker)
-    {
+    if (NULL == worker) {
         log_fatal(ctx->log, "Get current worker failed!");
         abort();
         return (void *)-1;
     }
 
-    for (;;)
-    {
+    for (;;) {
         /* 2. 等待事件通知 */
         FD_ZERO(&worker->rdset);
 
@@ -60,21 +58,17 @@ void *sdrd_worker_routine(void *_ctx)
         timeout.tv_sec = 30;
         timeout.tv_usec = 0;
         ret = select(worker->max+1, &worker->rdset, NULL, NULL, &timeout);
-        if (ret < 0)
-        {
+        if (ret < 0) {
             if (EINTR == errno) { continue; }
             log_fatal(worker->log, "errmsg:[%d] %s", errno, strerror(errno));
             abort();
             return (void *)-1;
-        }
-        else if (0 == ret)
-        {
+        } else if (0 == ret) {
             /* 超时: 模拟处理命令 */
             sdtp_cmd_t cmd;
             req = (sdtp_cmd_proc_req_t *)&cmd.args;
 
-            for (idx=0; idx<SDTP_WORKER_HDL_QNUM; ++idx)
-            {
+            for (idx=0; idx<SDTP_WORKER_HDL_QNUM; ++idx) {
                 memset(&cmd, 0, sizeof(cmd));
 
                 cmd.type = SDTP_CMD_PROC_REQ;
@@ -113,8 +107,7 @@ static sdtp_worker_t *sdrd_worker_get_curr(sdrd_cntx_t *ctx)
 
     /* 1. 获取线程编号 */
     id = thread_pool_get_tidx(ctx->worktp);
-    if (id < 0)
-    {
+    if (id < 0) {
         log_fatal(ctx->log, "Get thread index failed!");
         return NULL;
     }
@@ -149,8 +142,7 @@ int sdrd_worker_init(sdrd_cntx_t *ctx, sdtp_worker_t *worker, int id)
     sdrd_worker_usck_path(conf, path, worker->id);
 
     worker->cmd_sck_id = unix_udp_creat(path);
-    if (worker->cmd_sck_id < 0)
-    {
+    if (worker->cmd_sck_id < 0) {
         log_error(worker->log, "Create unix-udp socket failed!");
         return SDTP_ERR;
     }
@@ -175,13 +167,11 @@ static int sdrd_worker_event_core_hdl(sdrd_cntx_t *ctx, sdtp_worker_t *worker)
 {
     sdtp_cmd_t cmd;
 
-    if (!FD_ISSET(worker->cmd_sck_id, &worker->rdset))
-    {
+    if (!FD_ISSET(worker->cmd_sck_id, &worker->rdset)) {
         return SDTP_OK; /* 无数据 */
     }
 
-    if (unix_udp_recv(worker->cmd_sck_id, (void *)&cmd, sizeof(cmd)) < 0)
-    {
+    if (unix_udp_recv(worker->cmd_sck_id, (void *)&cmd, sizeof(cmd)) < 0) {
         log_error(worker->log, "errmsg:[%d] %s", errno, strerror(errno));
         return SDTP_ERR_RECV_CMD;
     }
@@ -228,26 +218,22 @@ static int sdrd_worker_cmd_proc_req_hdl(sdrd_cntx_t *ctx, sdtp_worker_t *worker,
     /* 1. 获取接收队列 */
     rq = ctx->recvq[work_cmd->rqidx];
 
-    while (1)
-    {
+    while (1) {
         /* 2. 从接收队列获取数据 */
         addr = queue_pop(rq);
-        if (NULL == addr)
-        {
+        if (NULL == addr) {
             return SDTP_OK;
         }
 
         group = (sdtp_group_t *)addr;
         ptr = addr + sizeof(sdtp_group_t);
 
-        for (idx=0; idx<group->num; ++idx)
-        {
+        for (idx=0; idx<group->num; ++idx) {
             /* 3. 执行回调函数 */
             head = (sdtp_header_t *)ptr;
 
             reg = &ctx->reg[head->type];
-            if (NULL == reg->proc)
-            {
+            if (NULL == reg->proc) {
                 ptr += head->length + sizeof(sdtp_header_t);
                 ++worker->drop_total;   /* 丢弃计数 */
                 continue;
@@ -257,9 +243,7 @@ static int sdrd_worker_cmd_proc_req_hdl(sdrd_cntx_t *ctx, sdtp_worker_t *worker,
                         ptr+sizeof(sdtp_header_t), head->length, reg->args))
             {
                 ++worker->err_total;    /* 错误计数 */
-            }
-            else
-            {
+            } else {
                 ++worker->proc_total;   /* 处理计数 */
             }
 

@@ -31,7 +31,7 @@ DIR += "$(LIB_DIR)/core"
 DIR += "$(LIB_DIR)/utils"
 DIR += "$(LIB_DIR)/rtmq"
 DIR += "$(LIB_DIR)/sdtp"
-DIR += "$(LIB_DIR)/gumbo"
+#DIR += "$(LIB_DIR)/gumbo"
 DIR += "$(LIB_DIR)/redis"
 
 DIR += "$(LIB_DIR)/agent"

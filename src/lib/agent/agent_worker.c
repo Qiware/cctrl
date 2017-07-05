@@ -77,8 +77,7 @@ void *agent_worker_routine(void *_ctx)
             log_fatal(worker->log, "errmsg:[%d] %s", errno, strerror(errno));
             abort();
             return (void *)-1;
-        }
-        else if (0 == ret) {
+        } else if (0 == ret) {
             agent_worker_timeout_handler(ctx, worker);
             continue;
         }

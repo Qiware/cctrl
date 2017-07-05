@@ -32,8 +32,7 @@ int main(int argc, char *argv[])
         if (ret < 0) {
             if (EINTR == errno) { continue; }
             return -1;
-        }
-        else if (0 == ret) {
+        } else if (0 == ret) {
             continue;
         }
         

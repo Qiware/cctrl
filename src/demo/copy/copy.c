@@ -60,11 +60,9 @@ void *cp_copy_routine(void *_ctx)
     while (1) {
         if (off > ctx->fst.st_size) {
             break;
-        }
-        else if (off + CP_SLOT_SIZE > ctx->fst.st_size) {
+        } else if (off + CP_SLOT_SIZE > ctx->fst.st_size) {
             size = ctx->fst.st_size - off;
-        }
-        else {
+        } else {
             size = CP_SLOT_SIZE;
         }
 

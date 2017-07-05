@@ -53,13 +53,10 @@ int main(void)
 
         if ((0 == strcasecmp(input, "q"))
             || (0 == strcasecmp(input, "quit"))
-            || (0 == strcasecmp(input, "exit")))
-        {
+            || (0 == strcasecmp(input, "exit"))) {
             break;
-        }
-        else if (0 == strcasecmp(input, "d")
-            || 0 == strcasecmp(input, "delete"))
-        {
+        } else if (0 == strcasecmp(input, "d")
+            || 0 == strcasecmp(input, "delete")) {
             scanf(" %s", input);
             key = atoi(input);
 

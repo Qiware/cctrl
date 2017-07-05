@@ -92,8 +92,7 @@ static void sdrd_rsvr_set_rdset(sdrd_cntx_t *ctx, sdrd_rsvr_t *rsvr)
     while (NULL != node) {
         curr = (sdrd_sck_t *)node->data;
         if ((rsvr->ctm - curr->rdtm > 30)
-            && (rsvr->ctm - curr->wrtm > 30))
-        {
+            && (rsvr->ctm - curr->wrtm > 30)) {
             log_error(rsvr->log, "Didn't active for along time! fd:%d ip:%s",
                     curr->fd, curr->ipaddr);
 
@@ -144,8 +143,7 @@ static void sdrd_rsvr_set_wrset(sdrd_cntx_t *ctx, sdrd_rsvr_t *rsvr)
         curr = (sdrd_sck_t *)node->data;
 
         if (list_empty(curr->mesg_list)
-            && (curr->send.optr == curr->send.iptr))
-        {
+            && (curr->send.optr == curr->send.iptr)) {
             if (node == tail) {
                 break;
             }
@@ -191,8 +189,7 @@ void *sdrd_rsvr_routine(void *_ctx)
         return (void *)SDTP_ERR;
     }
 
-    for (;;)
-    {
+    for (;;) {
         /* > 分发发送数据 */
         sdrd_rsvr_dist_send_data(ctx, rsvr);
 
@@ -208,8 +205,7 @@ void *sdrd_rsvr_routine(void *_ctx)
             log_fatal(rsvr->log, "errmsg:[%d] %s", errno, strerror(errno));
             abort();
             return (void *)SDTP_ERR;
-        }
-        else if (0 == ret) {
+        } else if (0 == ret) {
             sdrd_rsvr_event_timeout_hdl(ctx, rsvr);
             continue;
         }
@@ -430,8 +426,7 @@ static int sdrd_rsvr_trav_send(sdrd_cntx_t *ctx, sdrd_rsvr_t *rsvr)
             curr->wrtm = rsvr->ctm;
             send = &curr->send;
 
-            for (;;)
-            {
+            for (;;) {
                 /* 1. 填充发送缓存 */
                 if (send->iptr == send->optr) {
                     sdrd_rsvr_fill_send_buff(rsvr, curr);
@@ -516,12 +511,10 @@ static int sdrd_rsvr_recv_proc(sdrd_cntx_t *ctx, sdrd_rsvr_t *rsvr, sdrd_sck_t *
                 return SDTP_ERR;
             }
             continue;
-        }
-        else if (0 == n) {
+        } else if (0 == n) {
             log_info(rsvr->log, "Client disconnected. fd:%d n:%d/%d", sck->fd, n, left);
             return SDTP_SCK_DISCONN;
-        }
-        else if ((n < 0) && (EAGAIN == errno)) {
+        } else if ((n < 0) && (EAGAIN == errno)) {
             return SDTP_OK; /* Again */
         }
 
@@ -623,9 +616,7 @@ static int sdrd_rsvr_data_proc(sdrd_cntx_t *ctx, sdrd_rsvr_t *rsvr, sdrd_sck_t *
         /* 2.3 进行数据处理 */
         if (SDTP_SYS_MESG == head->flag) {
             sdrd_rsvr_sys_mesg_proc(ctx, rsvr, sck, recv->optr);
-        }
-        else
-        {
+        } else {
             sdrd_rsvr_exp_mesg_proc(ctx, rsvr, sck, recv->optr);
         }
 
@@ -1280,8 +1271,7 @@ static int sdrd_rsvr_cmd_proc_all_req(sdrd_cntx_t *ctx, sdrd_rsvr_t *rsvr)
     int idx;
 
     /* 依次遍历滞留总数 */
-    for (idx=0; idx<ctx->conf.recvq_num; ++idx)
-    {
+    for (idx=0; idx<ctx->conf.recvq_num; ++idx) {
         sdrd_rsvr_cmd_proc_req(ctx, rsvr, idx);
     }
 

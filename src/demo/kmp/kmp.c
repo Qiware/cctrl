@@ -31,12 +31,10 @@ static int *kmp_gen_next(char *p, int len)
             next[j] = k;
             if (p[k] != p[j]) {
                 next[j] = k;
-            }
-            else {
+            } else {
                 next[j] = next[k];
             }
-        }
-        else {
+        } else {
             k = next[k];
         }
     }
@@ -98,8 +96,7 @@ int kmp_match(kmp_t *kmp, const char *s, int len)
         /* ① 如果j == -1, 或者当前字符匹配成功(即s[i] == p[j]), 都令i++，j++ */
         if ((-1 == j) || (s[i] == kmp->p[j])) {
             ++i, ++j;
-        }
-        else {
+        } else {
             /* ② 如果j != -1, 且当前字符匹配失败(即s[i] != p[j]),
              * 则令i不变, j = next[j] (注: next[j]即为j所对应的next值) */
             j = kmp->next[j];

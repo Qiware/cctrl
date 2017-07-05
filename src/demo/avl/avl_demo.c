@@ -136,8 +136,7 @@ int main(void)
             || (0 == strcasecmp(input, "exit")))
         {
             break;
-        }
-        else if (0 == strcasecmp(input, "d")
+        } else if (0 == strcasecmp(input, "d")
             || 0 == strcasecmp(input, "delete"))
         {
             scanf(" %s", input);

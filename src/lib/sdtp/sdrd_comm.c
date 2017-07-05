@@ -278,8 +278,7 @@ int sdrd_node_to_svr_map_rand(sdrd_cntx_t *ctx, int nid)
         pthread_rwlock_unlock(&ctx->node_to_svr_map_lock);
         log_error(ctx->log, "Query nid [%d] failed!", nid);
         return -1;
-    }
-    else if (0 == map->list->num) {
+    } else if (0 == map->list->num) {
         pthread_rwlock_unlock(&ctx->node_to_svr_map_lock);
         return -1;
     }

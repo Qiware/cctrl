@@ -68,8 +68,7 @@ void *agent_rsvr_routine(void *_ctx)
             log_error(rsvr->log, "errmsg:[%d] %s!", errno, strerror(errno));
             abort();
             return (void *)-1;
-        }
-        else if (0 == rsvr->fds) {
+        } else if (0 == rsvr->fds) {
             rsvr->ctm = time(NULL);
             if (rsvr->ctm - rsvr->scan_tm > AGENT_TMOUT_SCAN_SEC) {
                 rsvr->scan_tm = rsvr->ctm;
@@ -607,20 +606,16 @@ static int agent_recv_head(agent_cntx_t *ctx, agent_rsvr_t *rsvr, socket_t *sck)
         if (n == left) {
             recv->off += n;
             break; /* 接收完毕 */
-        }
-        else if (n > 0) {
+        } else if (n > 0) {
             recv->off += n;
             continue;
-        }
-        else if (0 == n || ECONNRESET == errno) {
+        } else if (0 == n || ECONNRESET == errno) {
             log_info(rsvr->log, "Client disconnected. errmsg:[%d] %s! fd:[%d] n:[%d/%d]",
                     errno, strerror(errno), sck->fd, n, left);
             return AGENT_SCK_CLOSE;
-        }
-        else if ((n < 0) && (EAGAIN == errno)) {
+        } else if ((n < 0) && (EAGAIN == errno)) {
             return AGENT_SCK_AGAIN; /* 等待下次事件通知 */
-        }
-        else if (EINTR == errno) {
+        } else if (EINTR == errno) {
             continue; 
         }
         log_error(rsvr->log, "errmsg:[%d] %s. fd:[%d]", errno, strerror(errno), sck->fd);
@@ -672,17 +667,14 @@ static int agent_recv_body(agent_rsvr_t *rsvr, socket_t *sck)
         if (n == left) {
             recv->off += n;
             break; /* 接收完毕 */
-        }
-        else if (n > 0) {
+        } else if (n > 0) {
             recv->off += n;
             continue;
-        }
-        else if (0 == n) {
+        } else if (0 == n) {
             log_info(rsvr->log, "Client disconnected. errmsg:[%d] %s! fd:[%d] n:[%d/%d]",
                     errno, strerror(errno), sck->fd, n, left);
             return AGENT_SCK_CLOSE;
-        }
-        else if ((n < 0) && (EAGAIN == errno)) {
+        } else if ((n < 0) && (EAGAIN == errno)) {
             return AGENT_SCK_AGAIN;
         }
 
@@ -832,8 +824,7 @@ static int agent_recv_data(agent_cntx_t *ctx, agent_rsvr_t *rsvr, socket_t *sck)
 
                         if (head->length) {
                             recv->phase = SOCK_PHASE_READY_BODY; /* 设置下步 */
-                        }
-                        else {
+                        } else {
                             recv->phase = SOCK_PHASE_RECV_POST; /* 设置下步 */
                             goto RECV_POST;
                         }

@@ -83,8 +83,7 @@ void *agent_listen_routine(void *_ctx)
             if (EINTR == errno) { continue; }
             log_error(lsvr->log, "errmsg:[%d] %s!", errno, strerror(errno));
             continue;
-        }
-        else if (0 == ret) {
+        } else if (0 == ret) {
             agent_listen_timeout_hdl(ctx, lsvr);
             continue;
         }

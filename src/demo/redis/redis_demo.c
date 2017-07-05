@@ -94,13 +94,11 @@ void redis_test(void)
      * 这里只是为了演示. */
     if (REDIS_REPLY_NIL == r->type) {
         printf("Execute [%s] is NIL!\n", command4);
-    }
-    else if (REDIS_REPLY_STRING != r->type) {
+    } else if (REDIS_REPLY_STRING != r->type) {
         fprintf(stderr, "Execute [%s] failed!\n", command4);
         freeReplyObject(r);
         goto ERROR;
-    }
-    else {
+    } else {
         printf("Execute [%s] Success! Value:%s\n", command4, r->str);
     }
 

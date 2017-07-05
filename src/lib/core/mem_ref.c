@@ -207,8 +207,7 @@ int mem_ref_decr(void *addr)
         item = hash_tab_query(g_mem_ref_tab, (void *)&key, WRLOCK);
         if (NULL == item) {
             return 0; // Didn't find
-        }
-        else if (0 == item->count) {
+        } else if (0 == item->count) {
             hash_tab_delete(g_mem_ref_tab, (void *)&key, NONLOCK);
             hash_tab_unlock(g_mem_ref_tab, &key, WRLOCK);
 

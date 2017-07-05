@@ -46,8 +46,7 @@ static int rbt_trav_insert_list(rbt_data_t *data, list_t *list)
     if ((uint64_t)data->id%9) {
         if (rand()%2) {
             list_rpush(list, data);
-        }
-        else {
+        } else {
             list_lpush(list, data);
         }
     }
@@ -195,8 +194,7 @@ int main(void)
         if (NULL == data) {
             continue;
             assert(0);
-        }
-        else if (last + 1 != data->id) {
+        } else if (last + 1 != data->id) {
             //assert(0);
         }
         last = data->id;

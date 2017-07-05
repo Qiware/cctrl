@@ -77,8 +77,7 @@ static int proto_load_conf(kwt_tree_t *kwt, const char *path, log_cycle_t *log)
                 oct_node = xml_search(xml, word, "octet");
                 if (NULL == oct_node) {
                     oct = 0;
-                }
-                else {
+                } else {
                     oct = atoi(oct_node->value.str);
                 }
                 
@@ -87,8 +86,7 @@ static int proto_load_conf(kwt_tree_t *kwt, const char *path, log_cycle_t *log)
                     if (kwt_insert(kwt, (u_char *)key->value.str, key->value.len, (void *)1)) {
                         assert(0);
                     }
-                }
-                else {
+                } else {
                     str_to_hex(key->value.str, key->value.len, hex);
                     if (kwt_insert(kwt, (u_char *)hex, key->value.len/2, (void *)1)) {
                         assert(0);

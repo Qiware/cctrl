@@ -50,8 +50,7 @@ int merge(int *array, int min, int mid, int max)
 	while(i<n1 && j<n2) {
 		if(L[i] <= R[j]) {
 			array[idx++] = L[i++];
-		}
-		else {
+		} else {
 			array[idx++] = R[j++];
 		}
 	}
@@ -60,8 +59,7 @@ int merge(int *array, int min, int mid, int max)
 		for(; i<n1; i++) {
 			array[idx++] = L[i];
 		}
-	}
-	else {
+	} else {
 		for(; j<n2; j++) {
 			array[idx++] = R[j];
 		}

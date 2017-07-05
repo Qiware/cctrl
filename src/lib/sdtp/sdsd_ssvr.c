@@ -214,9 +214,7 @@ static void sdsd_ssvr_bind_cpu(sdsd_cntx_t *ctx, int id)
     mod = sysconf(_SC_NPROCESSORS_CONF) - cpu->start;
     if (mod <= 0) {
         idx = id % sysconf(_SC_NPROCESSORS_CONF);
-    }
-    else
-    {
+    } else {
         idx = cpu->start + (id % mod);
     }
 
@@ -416,8 +414,7 @@ void *sdsd_ssvr_routine(void *_ctx)
             log_fatal(ssvr->log, "errmsg:[%d] %s!", errno, strerror(errno));
             abort();
             return (void *)-1;
-        }
-        else if (0 == ret) {
+        } else if (0 == ret) {
             sdsd_ssvr_timeout_hdl(ctx, ssvr);
             continue;
         }
@@ -612,14 +609,12 @@ static int sdsd_ssvr_recv_proc(sdsd_cntx_t *ctx, sdsd_ssvr_t *ssvr)
                 return SDTP_ERR;
             }
             continue;
-        }
-        else if (0 == n) {
+        } else if (0 == n) {
             log_info(ssvr->log, "Client disconnected. fd:%d n:%d/%d", sck->fd, n, left);
             CLOSE(sck->fd);
             sdtp_snap_reset(recv);
             return SDTP_SCK_DISCONN;
-        }
-        else if ((n < 0) && (EAGAIN == errno)) {
+        } else if ((n < 0) && (EAGAIN == errno)) {
             return SDTP_OK; /* Again */
         }
 
@@ -713,9 +708,7 @@ static int sdsd_ssvr_data_proc(sdsd_cntx_t *ctx, sdsd_ssvr_t *ssvr, sdsd_sck_t *
         /* 2.3 进行数据处理 */
         if (SDTP_SYS_MESG == head->flag) {
             sdsd_ssvr_sys_mesg_proc(ctx, ssvr, sck, recv->optr);
-        }
-        else
-        {
+        } else {
             sdsd_ssvr_exp_mesg_proc(ctx, ssvr, sck, recv->optr);
         }
 
@@ -894,9 +887,7 @@ static int sdsd_ssvr_send_sys_data(sdsd_cntx_t *ctx, sdsd_ssvr_t *ssvr)
             if ((len = sdsd_ssvr_fill_send_buff(ssvr, sck)) <= 0) {
                 break;
             }
-        }
-        else
-        {
+        } else {
             len = send->iptr - send->optr;
         }
 

@@ -76,8 +76,7 @@ void *sdrd_lsn_routine(void *args)
             log_error(lsn->log, "errmsg:[%d] %s", errno, strerror(errno));
             abort();
             return (void *)-1;
-        }
-        else if (0 == ret) {
+        } else if (0 == ret) {
             continue;
         }
 
@@ -190,8 +189,7 @@ static int sdrd_lsn_accept(sdrd_cntx_t *ctx, sdrd_lsn_t *lsn)
             log_debug(lsn->log, "New connection! sckid:%d ip:%s",
                     sckid, inet_ntoa(cliaddr.sin_addr));
             break;
-        }
-        else if (EINTR == errno) {
+        } else if (EINTR == errno) {
             continue;
         }
 
