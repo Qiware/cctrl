@@ -9,6 +9,7 @@
  ******************************************************************************/
 
 #include "redo.h"
+#include "queue.h"
 #include "mem_ref.h"
 #include "rtmq_mesg.h"
 #include "rtmq_comm.h"
@@ -36,10 +37,10 @@ static int rtmq_rsvr_sub_req_hdl(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, rtmq_sck_t
 static int rtmq_rsvr_cmd_proc_req(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, int rqid);
 static int rtmq_rsvr_cmd_proc_all_req(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr);
 
-static rtmq_sck_t *rtmq_rsvr_sck_creat(rtmq_rsvr_t *rsvr, rtmq_cmd_add_sck_t *req);
+static rtmq_sck_t *rtmq_rsvr_sck_creat(rtmq_rsvr_t *rsvr, rtmq_conn_item_t *item);
 static void rtmq_rsvr_sck_free(rtmq_rsvr_t *rsvr, rtmq_sck_t *sck);
 
-static int rtmq_rsvr_add_conn_hdl(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, rtmq_cmd_add_sck_t *req);
+static int rtmq_rsvr_add_conn_hdl(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr);
 static int rtmq_rsvr_del_conn_hdl(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, list2_node_t *node);
 
 static int rtmq_rsvr_fill_send_buff(rtmq_rsvr_t *rsvr, rtmq_sck_t *sck);
@@ -73,8 +74,8 @@ static void rtmq_rsvr_set_rdset(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr)
 
     FD_ZERO(&rsvr->rdset);
 
-    FD_SET(rsvr->cmd_sck_id, &rsvr->rdset);
-    rsvr->max = rsvr->cmd_sck_id;
+    FD_SET(rsvr->cmd_fd, &rsvr->rdset);
+    rsvr->max = rsvr->cmd_fd;
 
     node = rsvr->conn_list->head;
     if (NULL != node) {
@@ -256,28 +257,18 @@ static rtmq_rsvr_t *rtmq_rsvr_get_curr(rtmq_cntx_t *ctx)
  ******************************************************************************/
 int rtmq_rsvr_init(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, int id)
 {
-    char path[FILE_PATH_MAX_LEN];
-    rtmq_conf_t *conf = &ctx->conf;
-
     rsvr->id = id;
     rsvr->log = ctx->log;
     rsvr->ctm = time(NULL);
     rsvr->ctx = (void *)ctx;
 
-    /* > 创建CMD套接字 */
-    rtmq_rsvr_usck_path(conf, path, rsvr->id);
-
-    rsvr->cmd_sck_id = unix_udp_creat(path);
-    if (rsvr->cmd_sck_id < 0) {
-        log_error(rsvr->log, "Create unix-udp socket failed!");
-        return RTMQ_ERR;
-    }
+    rsvr->cmd_fd = ctx->recv_cmd_fd[id].fd[0];
 
     /* > 创建套接字链表 */
     rsvr->conn_list = list2_creat(NULL);
     if (NULL == rsvr->conn_list) {
         log_error(rsvr->log, "Create list2 failed!");
-        CLOSE(rsvr->cmd_sck_id);
+        CLOSE(rsvr->cmd_fd);
         return RTMQ_ERR;
     }
 
@@ -305,7 +296,7 @@ static int rtmq_rsvr_recv_cmd(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr)
     memset(&cmd, 0, sizeof(cmd));
 
     /* 1. 接收命令数据 */
-    if (unix_udp_recv(rsvr->cmd_sck_id, (void *)&cmd, sizeof(cmd)) < 0) {
+    if (read(rsvr->cmd_fd, (void *)&cmd, sizeof(cmd)) < 0) {
         log_error(rsvr->log, "Recv command failed!");
         return RTMQ_ERR_RECV_CMD;
     }
@@ -313,7 +304,7 @@ static int rtmq_rsvr_recv_cmd(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr)
     /* 2. 进行命令处理 */
     switch (cmd.type) {
         case RTMQ_CMD_ADD_SCK:      /* 添加套接字 */
-            return rtmq_rsvr_add_conn_hdl(ctx, rsvr, (rtmq_cmd_add_sck_t *)&cmd.param);
+            return rtmq_rsvr_add_conn_hdl(ctx, rsvr);
         case RTMQ_CMD_DIST_REQ:     /* 分发发送数据 */
             return rtmq_rsvr_dist_data(ctx, rsvr);
         default:
@@ -636,7 +627,7 @@ static int rtmq_rsvr_data_proc(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, rtmq_sck_t *
         /* 2.2 校验合法性 */
         if (!RTMQ_HEAD_ISVALID(head)) {
             ++rsvr->err_total;
-            log_error(rsvr->log, "Header is invalid! Mark:%u/%u type:%d len:%d flag:%d",
+            log_error(rsvr->log, "Header is invalid! Mark:%u/%u type:0x%04X len:%d flag:%d",
                     head->chksum, RTMQ_CHKSUM_VAL, head->type, head->length, head->flag);
             return RTMQ_ERR;
         }
@@ -644,7 +635,7 @@ static int rtmq_rsvr_data_proc(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, rtmq_sck_t *
         /* 2.3 进行数据处理 */
         if (RTMQ_SYS_MESG == head->flag) {
             if (rtmq_rsvr_sys_mesg_proc(ctx, rsvr, sck, curr->optr)) {
-                log_error(rsvr->log, "Proc system message failed! ype:%d len:%d flag:%d",
+                log_error(rsvr->log, "Proc system message failed! type:0x%04X len:%d flag:%d",
                         head->type, head->length, head->flag);
                 return RTMQ_ERR;
             }
@@ -776,7 +767,7 @@ static int rtmq_rsvr_exp_mesg_proc(rtmq_cntx_t *ctx,
 static int rtmq_rsvr_event_core_hdl(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr)
 {
     /* 1. 接收命令数据 */
-    if (FD_ISSET(rsvr->cmd_sck_id, &rsvr->rdset)) {
+    if (FD_ISSET(rsvr->cmd_fd, &rsvr->rdset)) {
         rtmq_rsvr_recv_cmd(ctx, rsvr);
     }
 
@@ -1103,7 +1094,7 @@ static int rtmq_sub_list_cmp_cb(const rtmq_sub_req_t *req1, const rtmq_sub_req_t
     return (req1->type - req2->type);
 }
 
-static rtmq_sck_t *rtmq_rsvr_sck_creat(rtmq_rsvr_t *rsvr, rtmq_cmd_add_sck_t *req)
+static rtmq_sck_t *rtmq_rsvr_sck_creat(rtmq_rsvr_t *rsvr, rtmq_conn_item_t *item)
 {
     rtmq_sck_t *sck;
 
@@ -1111,19 +1102,19 @@ static rtmq_sck_t *rtmq_rsvr_sck_creat(rtmq_rsvr_t *rsvr, rtmq_cmd_add_sck_t *re
     sck = (rtmq_sck_t *)calloc(1, sizeof(rtmq_sck_t));
     if (NULL == sck) {
         log_error(rsvr->log, "Alloc memory failed!");
-        CLOSE(req->sckid);
+        CLOSE(item->fd);
         return NULL;
     }
 
     memset(sck, 0, sizeof(rtmq_sck_t));
 
-    sck->fd = req->sckid;
+    sck->fd = item->fd;
     sck->nid = -1;
-    sck->sid = req->sid;
+    sck->sid = item->sid;
     sck->ctm = time(NULL);
     sck->rdtm = sck->ctm;
     sck->wrtm = sck->ctm;
-    snprintf(sck->ipaddr, sizeof(sck->ipaddr), "%s", req->ipaddr);
+    snprintf(sck->ipaddr, sizeof(sck->ipaddr), "%s", item->ipaddr);
 
     do {
         /* > 创建订阅列表 */
@@ -1266,38 +1257,55 @@ static void rtmq_rsvr_sck_free(rtmq_rsvr_t *rsvr, rtmq_sck_t *sck)
  **返    回: 0:成功 !0:失败
  **实现描述: 将套接字对象加入到套接字链表中
  **注意事项:
- **作    者: # Qifeng.zou # 2015.01.01 #
+ **作    者: # Qifeng.zou # 2015.01.01, 2017.07.22 00:11:14 #
  ******************************************************************************/
-static int rtmq_rsvr_add_conn_hdl(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, rtmq_cmd_add_sck_t *req)
+static int rtmq_rsvr_add_conn_hdl(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr)
 {
+    int num, idx;
     rtmq_sck_t *sck;
     rtmq_conf_t *conf = &ctx->conf;
+    rtmq_conn_item_t *item[RTMQ_CONNQ_LEN];
 
-    /* > 创建套接字对象 */
-    sck = rtmq_rsvr_sck_creat(rsvr, req);
-    if (NULL == sck) {
-        log_error(rsvr->log, "Create socket object failed!");
-        return RTMQ_ERR;
+    while (1) {
+        /* > 获取新建连接 */
+        num = MIN(queue_used(ctx->connq[rsvr->id]), RTMQ_CONNQ_LEN);
+        if (0 == num) {
+            return RTMQ_OK;
+        }
+
+        num = queue_mpop(ctx->connq[rsvr->id], (void **)item, num);
+        if (0 == num) {
+            continue;
+        }
+
+        for (idx=0; idx<num; ++idx) {
+            /* > 创建套接字对象 */
+            sck = rtmq_rsvr_sck_creat(rsvr, item[idx]);
+            if (NULL == sck) {
+                log_error(rsvr->log, "Create socket object failed!");
+                continue;
+            }
+
+            /* > 加入套接字链尾 */
+            if (list2_rpush(rsvr->conn_list, (void *)sck)) {
+                log_error(rsvr->log, "Insert into list failed!");
+                rtmq_rsvr_sck_free(rsvr, sck);
+                continue;
+            }
+
+            /* > 初始化发送IOV */
+            if (wiov_init(&sck->send, 2 * conf->sendq.max)) {
+                log_error(rsvr->log, "Init wiov failed!");
+                rtmq_rsvr_sck_free(rsvr, sck);
+                continue;
+            }
+
+            ++rsvr->connections; /* 统计TCP连接数 */
+
+            log_trace(rsvr->log, "Add socket success! tid:%d fd:%d ipaddr:%s",
+                    rsvr->id, item[idx]->fd, item[idx]->ipaddr);
+        }
     }
-
-    /* > 加入套接字链尾 */
-    if (list2_rpush(rsvr->conn_list, (void *)sck)) {
-        log_error(rsvr->log, "Insert into list failed!");
-        rtmq_rsvr_sck_free(rsvr, sck);
-        return RTMQ_ERR;
-    }
-
-    /* > 初始化发送IOV */
-    if (wiov_init(&sck->send, 2 * conf->sendq.max)) {
-        log_error(rsvr->log, "Init wiov failed!");
-        rtmq_rsvr_sck_free(rsvr, sck);
-        return RTMQ_ERR;
-    }
-
-    ++rsvr->connections; /* 统计TCP连接数 */
-
-    log_trace(rsvr->log, "Tidx [%d] insert sckid [%d] success! ip:%s",
-            rsvr->id, req->sckid, req->ipaddr);
 
     return RTMQ_OK;
 }
@@ -1384,8 +1392,6 @@ static int rtmq_rsvr_cmd_proc_req(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, int rqid)
 {
     int widx;
     rtmq_cmd_t cmd;
-    char path[FILE_PATH_MAX_LEN];
-    rtmq_conf_t *conf = &ctx->conf;
     rtmq_cmd_proc_req_t *req = (rtmq_cmd_proc_req_t *)&cmd.param;
 
     memset(&cmd, 0, sizeof(cmd));
@@ -1399,17 +1405,9 @@ static int rtmq_rsvr_cmd_proc_req(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr, int rqid)
     /* widx = rtmq_rand_work(ctx); */
     widx = rqid / RTMQ_WORKER_HDL_QNUM;
 
-    rtmq_worker_usck_path(conf, path, widx);
-
     /* 2. 发送处理命令 */
-    if (unix_udp_send(rsvr->cmd_sck_id, path, &cmd, sizeof(rtmq_cmd_t)) < 0) {
-        if (EAGAIN != errno) {
-            log_error(rsvr->log, "Send command failed! errmsg:[%d] %s! path:[%s]",
-                      errno, strerror(errno), path);
-        }
-        return RTMQ_ERR;
-    }
-
+    write(ctx->work_cmd_fd[widx].fd[1], &cmd, sizeof(cmd));
+    
     return RTMQ_OK;
 }
 

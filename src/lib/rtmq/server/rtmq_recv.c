@@ -21,9 +21,14 @@
 
 static int rtmq_auth_init(rtmq_cntx_t *ctx);
 
+static int rtmq_creat_connq(rtmq_cntx_t *ctx);
 static int rtmq_creat_recvq(rtmq_cntx_t *ctx);
 static int rtmq_creat_sendq(rtmq_cntx_t *ctx);
 static int rtmq_creat_distq(rtmq_cntx_t *ctx);
+
+static int rtmq_creat_recv_cmd_fd(rtmq_cntx_t *ctx);
+static int rtmq_creat_work_cmd_fd(rtmq_cntx_t *ctx);
+static int rtmq_creat_dist_cmd_fd(rtmq_cntx_t *ctx);
 
 static int rtmq_cmd_send_dist_req(rtmq_cntx_t *ctx);
 
@@ -33,7 +38,6 @@ void rtmq_recvs_destroy(void *_ctx, void *param);
 static int rtmq_creat_workers(rtmq_cntx_t *ctx);
 void rtmq_workers_destroy(void *_ctx, void *param);
 
-static int rtmq_lock_server(const rtmq_conf_t *conf);
 static int rtmq_proc_def_hdl(int type, int orig, char *buff, size_t len, void *param);
 
 static int rtmq_pub_group_trav_cb(void *data, void *args);
@@ -57,7 +61,6 @@ rtmq_cntx_t *rtmq_init(const rtmq_conf_t *cf, log_cycle_t *log)
 {
     rtmq_cntx_t *ctx;
     rtmq_conf_t *conf;
-    char path[FILE_NAME_MAX_LEN];
 
     /* > 校验配置合法性 */
     if (!rtmq_conf_isvalid(cf)) {
@@ -78,23 +81,6 @@ rtmq_cntx_t *rtmq_init(const rtmq_conf_t *cf, log_cycle_t *log)
     conf->recvq_num = RTMQ_WORKER_HDL_QNUM * cf->work_thd_num;
 
     do {
-        /* > 锁住指定文件(注: 防止路径和结点ID相同的配置) */
-        if (rtmq_lock_server(conf)) {
-            log_error(ctx->log, "Lock path failed!");
-            break;
-        }
-
-        /* > 创建通信套接字 */
-        rtmq_cli_unix_path(conf, path);
-
-        ctx->cmd_sck_id = unix_udp_creat(path);
-        if (ctx->cmd_sck_id < 0) {
-            log_error(ctx->log, "Create command socket failed! path:%s", path);
-            break;
-        }
-
-        spin_lock_init(&ctx->cmd_sck_lock);
-
         /* > 构建鉴权表 */
         if (rtmq_auth_init(ctx)) {
             log_error(ctx->log, "Initialize auth failed!");
@@ -120,6 +106,12 @@ rtmq_cntx_t *rtmq_init(const rtmq_conf_t *cf, log_cycle_t *log)
             break;
         }
 
+        /* > 创建连接队列 */
+        if (rtmq_creat_connq(ctx)) {
+            log_error(ctx->log, "Create conn queue failed!");
+            break;
+        }
+
         /* > 创建接收队列 */
         if (rtmq_creat_recvq(ctx)) {
             log_error(ctx->log, "Create recv queue failed!");
@@ -135,6 +127,24 @@ rtmq_cntx_t *rtmq_init(const rtmq_conf_t *cf, log_cycle_t *log)
         /* > 创建分发队列 */
         if (rtmq_creat_distq(ctx)) {
             log_error(ctx->log, "Create distribute queue failed!");
+            break;
+        }
+
+        /* > 创建接收线程通信FD */
+        if (rtmq_creat_recv_cmd_fd(ctx)) {
+            log_error(ctx->log, "Create recv cmd fd failed!");
+            break;
+        }
+
+        /* > 创建工作线程通信FD */
+        if (rtmq_creat_work_cmd_fd(ctx)) {
+            log_error(ctx->log, "Create work cmd fd failed!");
+            break;
+        }
+
+        /* > 创建分发线程通信FD */
+        if (rtmq_creat_dist_cmd_fd(ctx)) {
+            log_error(ctx->log, "Create work cmd fd failed!");
             break;
         }
 
@@ -159,7 +169,6 @@ rtmq_cntx_t *rtmq_init(const rtmq_conf_t *cf, log_cycle_t *log)
         return ctx;
     } while(0);
 
-    close(ctx->cmd_sck_id);
     return NULL;
 }
 
@@ -335,7 +344,7 @@ int rtmq_publish(rtmq_cntx_t *ctx, int type, void *data, size_t len)
         return -1;
     }
 
-    /* > 查找消息订阅列表 */
+    /* > 给各订阅分组发送消息 */
     item.type = type;
     item.data = data;
     item.len = len;
@@ -344,6 +353,43 @@ int rtmq_publish(rtmq_cntx_t *ctx, int type, void *data, size_t len)
     avl_trav(list->groups, rtmq_pub_group_trav_cb, &item);
 
     hash_tab_unlock(ctx->sub, &key, RDLOCK);
+
+    return RTMQ_OK;
+}
+
+/******************************************************************************
+ **函数名称: rtmq_creat_connq
+ **功    能: 创建连接队列
+ **输入参数:
+ **     ctx: 全局对象
+ **输出参数: NONE
+ **返    回: 0:成功 !0:失败
+ **实现描述:
+ **     1. 创建队列数组
+ **     2. 依次创建连接队列
+ **注意事项:
+ **作    者: # Qifeng.zou # 2017.07.21 23:48:12 #
+ ******************************************************************************/
+static int rtmq_creat_connq(rtmq_cntx_t *ctx)
+{
+    int idx;
+    rtmq_conf_t *conf = &ctx->conf;
+
+    /* > 创建队列数组 */
+    ctx->connq = calloc(conf->recv_thd_num, sizeof(queue_t *));
+    if (NULL == ctx->connq) {
+        log_error(ctx->log, "errmsg:[%d] %s!", errno, strerror(errno));
+        return RTMQ_ERR;
+    }
+
+    /* > 依次创建连接队列 */
+    for(idx=0; idx<conf->recv_thd_num; ++idx) {
+        ctx->connq[idx] = queue_creat(RTMQ_CONNQ_LEN, sizeof(rtmq_conn_item_t));
+        if (NULL == ctx->connq[idx]) {
+            log_error(ctx->log, "Create conn queue failed!");
+            return RTMQ_ERR;
+        }
+    }
 
     return RTMQ_OK;
 }
@@ -457,6 +503,49 @@ static int rtmq_creat_distq(rtmq_cntx_t *ctx)
     return RTMQ_OK;
 }
 
+/* 创建分发线程通信管道 */
+static int rtmq_creat_dist_cmd_fd(rtmq_cntx_t *ctx)
+{
+    int idx, total = 1;
+
+    ctx->dist_cmd_fd = (rtmq_pipe_t *)calloc(total, sizeof(rtmq_pipe_t));
+    if (NULL == ctx->dist_cmd_fd) {
+        log_error(ctx->log, "errmsg:[%d] %s!", errno, strerror(errno));
+        return RTMQ_OK;
+    }
+
+    for (idx=0; idx<total; idx+=1) {
+        pipe(ctx->dist_cmd_fd[idx].fd);
+
+        fd_set_nonblocking(ctx->dist_cmd_fd[idx].fd[0]);
+        fd_set_nonblocking(ctx->dist_cmd_fd[idx].fd[1]);
+    }
+
+    return RTMQ_OK;
+}
+
+/* 创建接收线程通信管道 */
+static int rtmq_creat_recv_cmd_fd(rtmq_cntx_t *ctx)
+{
+    int idx;
+    rtmq_conf_t *conf = &ctx->conf;
+
+    ctx->recv_cmd_fd = (rtmq_pipe_t *)calloc(conf->recv_thd_num, sizeof(rtmq_pipe_t));
+    if (NULL == ctx->recv_cmd_fd) {
+        log_error(ctx->log, "errmsg:[%d] %s!", errno, strerror(errno));
+        return RTMQ_OK;
+    }
+
+    for (idx=0; idx<conf->recv_thd_num; idx+=1) {
+        pipe(ctx->recv_cmd_fd[idx].fd);
+
+        fd_set_nonblocking(ctx->recv_cmd_fd[idx].fd[0]);
+        fd_set_nonblocking(ctx->recv_cmd_fd[idx].fd[1]);
+    }
+
+    return RTMQ_OK;
+}
+
 /******************************************************************************
  **函数名称: rtmq_creat_recvs
  **功    能: 创建接收线程池
@@ -528,7 +617,7 @@ void rtmq_recvs_destroy(void *_ctx, void *param)
 
     for (idx=0; idx<ctx->conf.recv_thd_num; ++idx, ++rsvr) {
         /* > 关闭命令套接字 */
-        CLOSE(rsvr->cmd_sck_id);
+        CLOSE(rsvr->cmd_fd);
 
         /* > 关闭通信套接字 */
         rtmq_rsvr_del_all_conn_hdl(ctx, rsvr);
@@ -538,6 +627,28 @@ void rtmq_recvs_destroy(void *_ctx, void *param)
     thread_pool_destroy(ctx->recvtp);
 
     return;
+}
+
+/* 创建工作线程通信管道 */
+static int rtmq_creat_work_cmd_fd(rtmq_cntx_t *ctx)
+{
+    int idx;
+    rtmq_conf_t *conf = &ctx->conf;
+
+    ctx->work_cmd_fd = (rtmq_pipe_t *)calloc(conf->work_thd_num, sizeof(rtmq_pipe_t));
+    if (NULL == ctx->work_cmd_fd) {
+        log_error(ctx->log, "errmsg:[%d] %s!", errno, strerror(errno));
+        return RTMQ_OK;
+    }
+
+    for (idx=0; idx<conf->work_thd_num; idx+=1) {
+        pipe(ctx->work_cmd_fd[idx].fd);
+
+        fd_set_nonblocking(ctx->work_cmd_fd[idx].fd[0]);
+        fd_set_nonblocking(ctx->work_cmd_fd[idx].fd[1]);
+    }
+
+    return RTMQ_OK;
 }
 
 /******************************************************************************
@@ -609,7 +720,7 @@ void rtmq_workers_destroy(void *_ctx, void *param)
     rtmq_worker_t *wrk = (rtmq_worker_t *)ctx->worktp->data;
 
     for (idx=0; idx<conf->work_thd_num; ++idx, ++wrk) {
-        CLOSE(wrk->cmd_sck_id);
+        CLOSE(wrk->cmd_fd);
     }
 
     FREE(ctx->worktp->data);
@@ -652,59 +763,20 @@ static int rtmq_proc_def_hdl(int type, int orig, char *buff, size_t len, void *p
  ******************************************************************************/
 static int rtmq_cmd_send_dist_req(rtmq_cntx_t *ctx)
 {
-    int ret;
     rtmq_cmd_t cmd;
-    char path[FILE_NAME_MAX_LEN];
-    rtmq_conf_t *conf = &ctx->conf;
-
-    if (spin_trylock(&ctx->cmd_sck_lock)) {
-        return 0;
-    }
 
     memset(&cmd, 0, sizeof(cmd));
 
     cmd.type = RTMQ_CMD_DIST_REQ;
-    rtmq_dsvr_usck_path(conf, path);
-    ret = unix_udp_send(ctx->cmd_sck_id, path, &cmd, sizeof(cmd));
 
-    spin_unlock(&ctx->cmd_sck_lock);
-
-    log_trace(ctx->log, "Send command %d! ret:%d", RTMQ_CMD_DIST_REQ, ret);
-
-    return ret;
-}
-
-/******************************************************************************
- **函数名称: rtmq_lock_server
- **功    能: 锁定服务路径(注: 防止路径和结点ID相同的配置)
- **输入参数:
- **     conf: 配置信息
- **输出参数: NONE
- **返    回: 0:成功 !0:失败
- **实现描述:
- **注意事项: 文件描述符可不关闭
- **作    者: # Qifeng.zou # 2016.05.02 21:22:21 #
- ******************************************************************************/
-static int rtmq_lock_server(const rtmq_conf_t *conf)
-{
-    int fd;
-    char path[FILE_NAME_MAX_LEN];
-
-    rtmq_lock_path(conf, path);
-
-    Mkdir2(path, DIR_MODE);
-
-    fd = Open(path, O_CREAT|O_RDWR, OPEN_MODE);
-    if (fd < 0) {
-        return -1;
+    if (write(ctx->dist_cmd_fd[0].fd[1], &cmd, sizeof(cmd)) < 0) {
+        log_error(ctx->log, "Send dist command failed! errmsg:[%d] %s!", errno, strerror(errno));
+        return RTMQ_ERR;
     }
 
-    if (proc_try_wrlock(fd)) {
-        CLOSE(fd);
-        return -1;
-    }
+    log_trace(ctx->log, "Send dist command success!");
 
-    return 0;
+    return RTMQ_OK;
 }
 
 /* 遍历鉴权连表 */
