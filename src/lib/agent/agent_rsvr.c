@@ -169,8 +169,8 @@ int agent_rsvr_init(agent_cntx_t *ctx, agent_rsvr_t *rsvr, int idx)
             break;
         }
 
-        ftime(&cmd_sck->crtm);
-        cmd_sck->wrtm = cmd_sck->rdtm = cmd_sck->crtm.time;
+        ftime(&cmd_sck->ctm);
+        cmd_sck->wrtm = cmd_sck->rdtm = cmd_sck->ctm.time;
         cmd_sck->recv_cb = (socket_recv_cb_t)agt_rsvr_recv_cmd_hdl;
         cmd_sck->send_cb = NULL;
 
@@ -505,7 +505,7 @@ static int agent_rsvr_add_conn(agent_cntx_t *ctx, agent_rsvr_t *rsvr)
             /* > 设置SCK信息 */
             sck->fd = add[idx]->fd;
             sck->wrtm = sck->rdtm = ctm;/* 记录当前时间 */
-            memcpy(&sck->crtm, &add[idx]->crtm, sizeof(add[idx]->crtm)); /* 创建时间 */
+            memcpy(&sck->ctm, &add[idx]->ctm, sizeof(add[idx]->ctm)); /* 创建时间 */
 
             sck->recv.phase = SOCK_PHASE_RECV_INIT;
             sck->recv_cb = (socket_recv_cb_t)agent_recv_data;   /* Recv回调函数 */

@@ -35,7 +35,7 @@ typedef struct
 typedef struct
 {
     int fd;                                 /* 套接字 */
-    struct timeb crtm;                      /* 创建时间 */
+    struct timeb ctm;                       /* 创建时间 */
     uint64_t sid;                           /* Session ID */
 } agent_add_sck_t;
 
