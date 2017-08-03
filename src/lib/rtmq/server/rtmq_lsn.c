@@ -149,7 +149,8 @@ static int rtmq_lsn_accept(rtmq_cntx_t *ctx, rtmq_listen_t *lsn)
     item = queue_malloc(ctx->connq[idx], sizeof(rtmq_conn_item_t));
     if (NULL == item) {
         close(fd);
-        log_error(lsn->log, "Alloc from conn queue failed!");
+        log_error(lsn->log, "Alloc from conn queue failed! idx:%d size:%d|%d",
+                idx, queue_space(ctx->connq[idx]), sizeof(rtmq_conn_item_t));
         return RTMQ_ERR;
     }
 
@@ -165,7 +166,7 @@ static int rtmq_lsn_accept(rtmq_cntx_t *ctx, rtmq_listen_t *lsn)
 
     cmd.type = RTMQ_CMD_ADD_SCK;
 
-    write(ctx->recv_cmd_fd[idx].fd[1], &cmd, sizeof(cmd));
+    pipe_write(&ctx->recv_cmd_fd[idx], &cmd, sizeof(cmd));
 
     log_trace(lsn->log, "Accept new connection! idx:%d sid:%lu fd:%d ip:%s",
             idx, lsn->sid, fd, item->ipaddr);
