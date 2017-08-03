@@ -70,10 +70,9 @@ void *acc_lsvr_routine(void *_ctx)
     while (1) {
         FD_ZERO(&rdset);
 
-        FD_SET(lsvr->cmd_sck_id, &rdset);
         FD_SET(ctx->listen.lsn_sck_id, &rdset);
 
-        max = MAX(ctx->listen.lsn_sck_id, lsvr->cmd_sck_id);
+        max = ctx->listen.lsn_sck_id;
 
         /* > 等待事件通知 */
         tv.tv_sec = 1;
@@ -94,37 +93,6 @@ void *acc_lsvr_routine(void *_ctx)
         }
     }
     return (void *)0;
-}
-
-/******************************************************************************
- **函数名称: acc_lsvr_init
- **功    能: 初始化侦听线程
- **输入参数:
- **     ctx: 全局信息
- **     lsvr: 侦听对象
- **     idx: 侦听对象索引
- **输出参数: NONE
- **返    回: 0:成功 !0:失败
- **实现描述: 
- **注意事项: 
- **作    者: # Qifeng.zou # 2014.11.19 #
- ******************************************************************************/
-int acc_lsvr_init(acc_cntx_t *ctx, acc_lsvr_t *lsvr, int idx)
-{
-    char path[FILE_NAME_MAX_LEN];
-    acc_conf_t *conf = ctx->conf;
-
-    lsvr->id = idx;
-
-    acc_lsvr_cmd_usck_path(conf, idx, path, sizeof(path));
-
-    lsvr->cmd_sck_id = unix_udp_creat(path);
-    if (lsvr->cmd_sck_id < 0) {
-        log_error(ctx->log, "errmsg:[%d] %s! idx:%d path:%s", errno, strerror(errno), idx, path);
-        return ACC_ERR;
-    }
-
-    return ACC_OK;
 }
 
 /******************************************************************************
@@ -201,7 +169,7 @@ static int acc_lsvr_accept(acc_cntx_t *ctx, acc_lsvr_t *lsvr)
 
     add->fd = fd;
     add->cid = cid;
-    ftime(&add->crtm);
+    ftime(&add->ctm);
 
     log_debug(lsvr->log, "Push data! fd:%d addr:%p cid:%u idx:%d", fd, add, cid, idx);
 
@@ -229,13 +197,10 @@ static int acc_lsvr_accept(acc_cntx_t *ctx, acc_lsvr_t *lsvr)
 static int acc_lsvr_send_add_sck_req(acc_cntx_t *ctx, acc_lsvr_t *lsvr, int idx)
 {
     cmd_data_t cmd;
-    char path[FILE_NAME_MAX_LEN];
-    acc_conf_t *conf = ctx->conf;
 
     cmd.type = CMD_ADD_SCK;
-    acc_rsvr_cmd_usck_path(conf, idx, path, sizeof(path));
 
-    unix_udp_send(lsvr->cmd_sck_id, path, &cmd, sizeof(cmd));
+    pipe_write(&ctx->rsvr_cmd_fd[idx], &cmd, sizeof(cmd));
 
     return ACC_OK;
 }
