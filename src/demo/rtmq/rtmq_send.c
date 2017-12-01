@@ -10,6 +10,8 @@
 
 #define __RTMQ_DEBUG_SEND__
 
+static int rtmq_proxy_def_handler(int type, int nid, char *buff, size_t len, void *args);
+
 /******************************************************************************
  **函数名称: rtmq_send_debug 
  **功    能: 发送端调试
@@ -27,24 +29,22 @@
 
 int rtmq_send_debug(rtmq_proxy_t *ctx, int secs)
 {
-    size_t idx = 0;
+    char data[SIZE];
+    size_t idx = 0, n = 0, len;
     double sleep2 = 0;
     struct timeval stime, etime;
     int total = 0, fails = 0;
-    char data[SIZE];
-    mesg_search_req_t *req;
 
     for (;;) {
+        ++n;
         gettimeofday(&stime, NULL);
         sleep2 = 0;
         fails = 0;
         total = 0;
         for (idx=0; idx<LOOP; idx++) {
-            req = (mesg_search_req_t *)data;
+            len = snprintf(data, sizeof(data), "BAIDU%lu-%lu", n, idx);
 
-            snprintf(req->words, sizeof(req->words), "%s", "BAIDU");
-
-            if (rtmq_proxy_async_send(ctx, MSG_SEARCH_REQ, req, sizeof(mesg_search_req_t))) {
+            if (rtmq_proxy_async_send(ctx, MSG_SEARCH_REQ, data, len + rand()%1024)) {
                 idx--;
                 usleep(2);
                 sleep2 += USLEEP*1000000;
@@ -70,6 +70,7 @@ int rtmq_send_debug(rtmq_proxy_t *ctx, int secs)
                 etime.tv_sec - stime.tv_sec,
                 etime.tv_usec - stime.tv_usec,
                 total, fails);
+        sleep(secs);
     }
 
     pause();
@@ -80,19 +81,22 @@ int rtmq_send_debug(rtmq_proxy_t *ctx, int secs)
 static void rtmq_setup_conf(rtmq_proxy_conf_t *conf, int port)
 {
     conf->nid = 1;
+    conf->gid = 1;
 
     snprintf(conf->auth.usr, sizeof(conf->auth.usr), "qifeng");
     snprintf(conf->auth.passwd, sizeof(conf->auth.passwd), "111111");
 
-    snprintf(conf->path, sizeof(conf->path), ".");
-    snprintf(conf->ipaddr, sizeof(conf->ipaddr), "127.0.0.1");
+    snprintf(conf->ipaddr, sizeof(conf->ipaddr), "127.0.0.1:%d", port);
 
-    conf->port = port;
-    conf->send_thd_num = 1;
+    conf->send_thd_num = 2;
+    conf->work_thd_num = 4;
     conf->recv_buff_size = 2 * MB;
 
     conf->sendq.max = 2048;
     conf->sendq.size = 4096;
+
+    conf->recvq.max = 2048;
+    conf->recvq.size = 4096;
 }
 
 int main(int argc, const char *argv[])
@@ -130,18 +134,34 @@ int main(int argc, const char *argv[])
         return -1;
     }
 
+    rtmq_proxy_reg_add(ctx, MSG_SEARCH_REQ, rtmq_proxy_def_handler, ctx);
+
     if (rtmq_proxy_launch(ctx)) {
         fprintf(stderr, "Start up send-server failed!");
         return -1;
     }
 
 #if defined(__RTMQ_DEBUG_SEND__)
-    rtmq_send_debug(ctx, 5);
+    rtmq_send_debug(ctx, 0);
 #endif /*__RTMQ_DEBUG_SEND__*/
 
     while (1) { pause(); }
 
     fprintf(stderr, "Exit send server!");
+
+    return 0;
+}
+
+/* 回调函数 */
+static int rtmq_proxy_def_handler(int type, int nid, char *buff, size_t len, void *args)
+{
+    char mesg[1024];
+
+    memset(mesg, 0, sizeof(mesg));
+
+    strncpy(mesg, buff, sizeof(mesg)-1>len?len:sizeof(mesg)-1);
+
+    fprintf(stderr, "type:%d nid:%d buff:[%s] len:%ld args:%p\n", type, nid, mesg, len, args);
 
     return 0;
 }
