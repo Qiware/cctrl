@@ -761,7 +761,7 @@ static int rtmq_cmd_send_dist_req(rtmq_cntx_t *ctx)
     cmd.type = RTMQ_CMD_DIST_REQ;
 
     if (pipe_write(&ctx->dist_cmd_fd[0], &cmd, sizeof(cmd)) < 0) {
-        log_error(ctx->log, "Send dist command failed! errmsg:[%d] %s!", errno, strerror(errno));
+        //log_error(ctx->log, "Send dist command failed! errmsg:[%d] %s!", errno, strerror(errno));
         return RTMQ_ERR;
     }
 
