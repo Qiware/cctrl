@@ -5,7 +5,7 @@
 #include "rtmq_recv.h"
 
 /* 回调函数 */
-static int rtmq_work_def_hdl(int type, int nid, char *buff, size_t len, void *args)
+static int rtmq_work_def_handler(int type, int nid, char *buff, size_t len, void *args)
 {
     char mesg[1024];
     rtmq_cntx_t *ctx = (rtmq_cntx_t *)args;
@@ -70,7 +70,7 @@ int main(int argc, const char *argv[])
 
     signal(SIGPIPE, SIG_IGN);
                                        
-    log = log_init(LOG_LEVEL_DEBUG, "./rtmq.log");
+    log = log_init(LOG_LEVEL_ERROR, "./rtmq.log");
     if (NULL == log) {
         fprintf(stderr, "Initialize log failed!");
         return RTMQ_ERR;
@@ -83,7 +83,7 @@ int main(int argc, const char *argv[])
         return RTMQ_ERR;
     }
 
-    rtmq_register(ctx, MSG_SEARCH_REQ, rtmq_work_def_hdl, ctx);
+    rtmq_register(ctx, MSG_SEARCH_REQ, rtmq_work_def_handler, ctx);
 
     /* 2. 接收服务端工作 */
     ret = rtmq_launch(ctx);

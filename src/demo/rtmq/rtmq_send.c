@@ -23,7 +23,7 @@ static int rtmq_proxy_def_handler(int type, int nid, char *buff, size_t len, voi
  **注意事项: 
  **作    者: # Qifeng.zou # 2014.03.26 #
  ******************************************************************************/
-#define LOOP        (100000)
+#define LOOP        (10000)
 #define USLEEP      (10)
 #define SIZE        (4096)
 
@@ -122,7 +122,7 @@ int main(int argc, const char *argv[])
 
     mem_ref_init();
 
-    log = log_init(LOG_LEVEL_DEBUG, "./rtmq_ssvr.log");
+    log = log_init(LOG_LEVEL_ERROR, "./rtmq_ssvr.log");
     if (NULL == log) {
         fprintf(stderr, "errmsg:[%d] %s!", errno, strerror(errno));
         return -1;
@@ -142,7 +142,7 @@ int main(int argc, const char *argv[])
     }
 
 #if defined(__RTMQ_DEBUG_SEND__)
-    rtmq_send_debug(ctx, 0);
+    rtmq_send_debug(ctx, 1);
 #endif /*__RTMQ_DEBUG_SEND__*/
 
     while (1) { pause(); }
