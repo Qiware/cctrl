@@ -9,6 +9,7 @@ static int rtmq_proxy_creat_send_cmd_fd(rtmq_proxy_t *pxy);
 static int rtmq_proxy_creat_work_cmd_fd(rtmq_proxy_t *pxy);
 
 static int rtmq_proxy_cmd_work_chan_init(rtmq_proxy_t *pxy);
+static bool rtmq_proxy_conf_isvalid(const rtmq_proxy_conf_t *conf);
 
 /******************************************************************************
  **函数名称: rtmq_proxy_creat_workers
@@ -71,7 +72,7 @@ static int rtmq_proxy_creat_work_cmd_fd(rtmq_proxy_t *pxy)
 }
 
 /******************************************************************************
- **函数名称: rtmq_proxy_ssvr_init_cb
+ **函数名称: rtmq_proxy_tsvr_init_cb
  **功    能: 初始化线程对象
  **输入参数:
  **     pxy: 全局对象
@@ -81,15 +82,15 @@ static int rtmq_proxy_creat_work_cmd_fd(rtmq_proxy_t *pxy)
  **注意事项:
  **作    者: # Qifeng.zou # 2017.07.20 11:28:40 #
  ******************************************************************************/
-static int rtmq_proxy_ssvr_init_cb(iplist_item_t *item, rtmq_proxy_t *pxy)
+static int rtmq_proxy_tsvr_init_cb(iplist_item_t *item, rtmq_proxy_t *pxy)
 {
     int m, idx;
     rtmq_proxy_conf_t *conf = &pxy->conf;
-    rtmq_proxy_ssvr_t *ssvr = thread_pool_get_args(pxy->sendtp);
+    rtmq_proxy_tsvr_t *ssvr = thread_pool_get_args(pxy->sendtp);
 
     for (m=0; m<conf->send_thd_num; ++m) {
         idx = item->idx * conf->send_thd_num + m;
-        if (rtmq_proxy_ssvr_init(pxy, ssvr+idx,
+        if (rtmq_proxy_tsvr_init(pxy, ssvr+idx,
                     idx, item->ipaddr, item->port,
                     pxy->sendq[idx % conf->send_thd_num],
                     &pxy->send_cmd_fd[idx % conf->send_thd_num])) {
@@ -135,14 +136,14 @@ static int rtmq_proxy_creat_send_cmd_fd(rtmq_proxy_t *pxy)
 static int rtmq_proxy_creat_senders(rtmq_proxy_t *pxy)
 {
     int num, total;
-    rtmq_proxy_ssvr_t *ssvr;
+    rtmq_proxy_tsvr_t *ssvr;
     rtmq_proxy_conf_t *conf = &pxy->conf;
 
     num = list_length(pxy->iplist); /* IP数目 */
     total = num * conf->send_thd_num;
 
     /* > 创建对象 */
-    ssvr = (rtmq_proxy_ssvr_t *)calloc(total, sizeof(rtmq_proxy_ssvr_t));
+    ssvr = (rtmq_proxy_tsvr_t *)calloc(total, sizeof(rtmq_proxy_tsvr_t));
     if (NULL == ssvr) {
         log_error(pxy->log, "errmsg:[%d] %s!", errno, strerror(errno));
         return RTMQ_ERR;
@@ -157,7 +158,7 @@ static int rtmq_proxy_creat_senders(rtmq_proxy_t *pxy)
     }
 
     /* > 初始化线程 */
-    list_trav(pxy->iplist, (trav_cb_t)rtmq_proxy_ssvr_init_cb, pxy);
+    list_trav(pxy->iplist, (trav_cb_t)rtmq_proxy_tsvr_init_cb, pxy);
 
     return RTMQ_OK;
 }
@@ -247,6 +248,12 @@ static int rtmq_proxy_creat_sendq(rtmq_proxy_t *pxy)
 rtmq_proxy_t *rtmq_proxy_init(const rtmq_proxy_conf_t *conf, log_cycle_t *log)
 {
     rtmq_proxy_t *pxy;
+
+    /* > 判断配置合法性 */
+    if (!rtmq_proxy_conf_isvalid(conf)) {
+        log_error(log, "Rtmq proxy configuration is invalid!");
+        return NULL;
+    }
 
     /* > 创建对象 */
     pxy = (rtmq_proxy_t *)calloc(1, sizeof(rtmq_proxy_t));
@@ -346,7 +353,7 @@ int rtmq_proxy_launch(rtmq_proxy_t *pxy)
     for (n=0; n<num; ++n) {
         for (m=0; m<conf->send_thd_num; ++m) {
             idx = n*conf->send_thd_num + m;
-            thread_pool_add_worker(pxy->sendtp, rtmq_proxy_ssvr_routine, pxy);
+            thread_pool_add_worker(pxy->sendtp, rtmq_proxy_tsvr_routine, pxy);
         }
     }
 
@@ -475,4 +482,30 @@ int rtmq_proxy_async_send(rtmq_proxy_t *pxy, int type, const void *data, size_t 
     rtmq_proxy_cmd_send_req(pxy, idx);
 
     return RTMQ_OK;
+}
+
+/******************************************************************************
+ **函数名称: rtmq_proxy_conf_isvalid
+ **功    能: 校验配置合法性
+ **输入参数:
+ **     conf: 配置数据
+ **输出参数: NONE
+ **返    回: true:合法 false:非法
+ **实现描述: 逐一检查配置字段的合法性
+ **注意事项:
+ **作    者: # Qifeng.zou # 2017.11.28 10:39:35 #
+ ******************************************************************************/
+static bool rtmq_proxy_conf_isvalid(const rtmq_proxy_conf_t *conf)
+{
+    if ((0 == conf->nid)
+        || (0 == conf->gid)
+        || (0 == strlen(conf->ipaddr))
+        || (0 == conf->send_thd_num)
+        || (0 == conf->work_thd_num)
+        || (0 == conf->recv_buff_size)
+        || ((0 == conf->sendq.max) || (0 == conf->sendq.size))
+        || ((0 == conf->recvq.max) || (0 == conf->recvq.size))) {
+        return false;
+    }
+    return true;
 }
