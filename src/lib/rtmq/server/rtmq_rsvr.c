@@ -818,8 +818,6 @@ static int rtmq_rsvr_event_timeout_hdl(rtmq_cntx_t *ctx, rtmq_rsvr_t *rsvr)
         if (rsvr->ctm - curr->rdtm >= 60) {
             log_trace(rsvr->log, "Didn't active for along time! fd:%d ip:%s",
                     curr->fd, curr->ipaddr);
-            /* 释放数据 */
-            mem_ref_decr(curr->recv.base);
             /* 删除连接 */
             if (node == tail) {
                 rtmq_rsvr_del_conn_hdl(ctx, rsvr, node);
