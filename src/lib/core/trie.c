@@ -28,9 +28,8 @@ trie_tree_t *trie_creat(trie_opt_t *opt)
     trie_opt_t _opt;
     trie_tree_t *kwt;
 
-    if (!ISPOWEROF2(max)) {
-        return NULL;
-    } else if (NULL == opt) {
+    max = power2(max);
+    if (NULL == opt) {
         opt = &_opt;
         opt->pool = (void *)NULL;
         opt->alloc = (mem_alloc_cb_t)mem_alloc;

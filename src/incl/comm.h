@@ -83,19 +83,6 @@
 #define MB                  (1024 * KB)         /* MB */
 #define GB                  (1024 * MB)         /* GB */
 
-/* 系统流水类型 */
-typedef struct
-{
-    union {
-        struct {
-            uint32_t nid:16;                    /* 结点ID */
-            uint32_t svrid:16;                  /* 服务ID(如: 接入层中接收线程的索引号) */
-            uint32_t seq;                       /* 顺序号 */
-        };
-        uint64_t serial;                        /* 序列号 */
-    };
-} serial_t;
-
 /* KV类型 */
 typedef struct
 {
@@ -176,5 +163,7 @@ static inline int cmp_cb_int64(const key_obj_t *key1, const key_obj_t *key2) { r
 
 static inline int cmp_cb_str(const key_obj_t *key1, const key_obj_t *key2) { return strcmp((char *)key1->k, (char *)key2->k); }
 static inline int cmp_cb_ptr(const key_obj_t *key1, const key_obj_t *key2) { return (*(uint64_t *)key1->k - *(uint64_t *)key2->k); }
+
+int power2(int v);
 
 #endif /*__COMM_H__*/

@@ -15,7 +15,8 @@ LIBS_PATH = -L$(PROJ)/lib
 LIBS = -lpthread
 LIBS += $(SHARED_LIB)
 
-SRC_LIST = log.c \
+SRC_LIST = comm.c \
+			log.c \
 			slot.c \
 			lock.c \
 			http.c \
@@ -42,7 +43,6 @@ SRC_LIST = log.c \
 			shm_btree.c \
 			rb_tree.c \
 			trie.c \
-			pipe.c \
 			timer.c \
 			avl_tree.c \
 			xml_comm.c \
@@ -56,6 +56,7 @@ SRC_LIST = log.c \
 			hash_alg.c \
 			str.c \
 			uri.c \
+			pipe.c \
 			iovec.c \
 			vector.c \
 			quick_sort.c

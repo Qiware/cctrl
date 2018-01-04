@@ -3,7 +3,6 @@
 #include "list.h"
 #include "mesg.h"
 #include "redo.h"
-#include "utils.h"
 #include "access.h"
 #include "mem_ref.h"
 #include "command.h"
