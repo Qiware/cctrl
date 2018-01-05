@@ -450,7 +450,7 @@ static int rtmq_creat_sendq(rtmq_cntx_t *ctx)
     rtmq_conf_t *conf = &ctx->conf;
 
     /* > 创建队列数组 */
-    ctx->sendq = calloc(1, conf->recv_thd_num*sizeof(queue_t *));
+    ctx->sendq = (ring_t **)calloc(conf->recv_thd_num, sizeof(ring_t *));
     if (NULL == ctx->sendq) {
         log_error(ctx->log, "errmsg:[%d] %s!", errno, strerror(errno));
         return RTMQ_ERR;
