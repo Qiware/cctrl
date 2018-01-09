@@ -3,21 +3,21 @@
 ##
 ## 文件名: Makefile
 ## 版本号: 1.0
-## 描  述: 日志服务模块
-## 作  者: # Qifeng.zou # 2014.09.01 #
+## 描  述: 红黑树的测试代码
+## 作  者: # Qifeng.zou # 09:04:12 #
 ###############################################################################
 include $(PROJ)/make/build.mak
 
 INCLUDE = -I. -I$(PROJ)/src/incl
 LIBS_PATH = -L$(PROJ)/lib
-LIBS = -lpthread -lcore
+LIBS = -lcore
 
-SRC_LIST = hash_map_demo.c
+SRC_LIST = main.c
 
 OBJS = $(subst .c,.o, $(SRC_LIST)) 
 HEADS = $(call func_get_dep_head_list, $(SRC_LIST))
 
-TARGET = hash_map_demo
+TARGET = mem_ref
 
 .PHONY: all clean
 
@@ -25,8 +25,8 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	@$(CC) $(CFLAGS) -o $@ $(OBJS) $(INCLUDE) $(LIBS_PATH) $(LIBS)
 	@echo "CC $@"
+	@mv $@ $(PROJ_BIN) 
 	@rm -fr $(OBJS)
-	@mv $(TARGET) $(PROJ_BIN)/
 	@echo "$@ is OK!"
 
 $(OBJS): %.o : %.c $(HEADS)
@@ -35,4 +35,4 @@ $(OBJS): %.o : %.c $(HEADS)
 
 clean:
 	@rm -fr $(OBJS) $(TARGET)
-	@echo "rm -fr *.o $(TARGET)"
+	@echo "rm -fr *.o $(PROJ_LIB)/$(TARGET)"

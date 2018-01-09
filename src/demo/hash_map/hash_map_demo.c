@@ -6,9 +6,9 @@
 #include <stdint.h>
 
 #include "redo.h"
-#include "hash_map.h"
+#include "hash_tab.h"
 
-#define DATA_NUM    (15)
+#define DATA_NUM    (1000000)
 
 typedef struct
 {
@@ -53,6 +53,7 @@ int main(void)
         fprintf(stderr, "Hash map data num:%lu\n", hash_tab_total(map));
     }
 
+#if 0
     Sleep(5);
 
     for (idx=0; idx<DATA_NUM; ++idx) {
@@ -61,12 +62,14 @@ int main(void)
         data = hash_tab_query(map, &key, NONLOCK);
         if (NULL == data) {
             fprintf(stderr, "Didn't find idx:%d!", idx);
+            assert(0);
             continue;
         }
         fprintf(stderr, "Data idx:%u\n", data->idx);
     }
 
     Sleep(5);
+#endif
 
     for (idx=0; idx<DATA_NUM; ++idx) {
         key.idx = idx;
@@ -74,23 +77,27 @@ int main(void)
         data = hash_tab_delete(map, &key, NONLOCK);
         if (NULL == data) {
             fprintf(stderr, "Didn't find idx:%d!", idx);
+            assert(0);
             continue;
         }
         fprintf(stderr, "Delete idx:%u\n", data->idx);
         free(data);
     }
 
+#if 0
     Sleep(5);
 
     for (idx=0; idx<DATA_NUM; ++idx) {
         key.idx = idx;
 
-        data = hash_tab_query(map, &key, NONLOCK);
+        data = hash_tab_delete(map, &key, NONLOCK);
         if (NULL == data) {
             fprintf(stderr, "Didn't find idx:%d!\n", idx);
             continue;
         }
         fprintf(stderr, "Data idx:%u\n", data->idx);
     }
+#endif
+
     return 0;
 }
