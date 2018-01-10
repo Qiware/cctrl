@@ -12,7 +12,8 @@ INCLUDE = -I. -I$(PROJ)/src/incl
 LIBS_PATH = -L$(PROJ)/lib
 LIBS = -lcore
 
-SRC_LIST = rbt_demo.c
+#SRC_LIST = rbt_demo.c
+SRC_LIST = rbt_ptr.c
 
 OBJS = $(subst .c,.o, $(SRC_LIST)) 
 HEADS = $(call func_get_dep_head_list, $(SRC_LIST))

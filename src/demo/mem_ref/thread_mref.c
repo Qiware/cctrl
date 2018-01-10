@@ -4,13 +4,15 @@
 #include "queue.h"
 #include "thread_pool.h"
 
-#define NUM (1000)
-#define LEN (1024)
+#define LEN (1 * MB)
 
 queue_t *q;
+int NUM = 1;
+int MOD = 1;
 
 typedef struct
 {
+    int idx;
     void *base;
     void *data;
 } item_t;
@@ -25,17 +27,17 @@ void *productor(void *arg)
         addr = mref_alloc(LEN, NULL,
                 (mem_alloc_cb_t)mem_alloc,
                 (mem_dealloc_cb_t)mem_dealloc);
-        for (n=0; n<LEN; n++) {
+        for (n=0; n<LEN; n+=(random()%MOD + 1)) {
             item = queue_malloc(q, sizeof(item_t));
             if (NULL == item) {
                 continue;
             }
+            item->idx = n;
             item->base = addr;
             item->data = addr + n;
             mref_inc(item->base);
-            if (queue_push(q, item)) {
-                mref_dec(item->base);
-            }
+
+            queue_push(q, item);
         }
         mref_dec(addr);
     }
@@ -68,9 +70,17 @@ void *customer(void *arg)
     return NULL;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     thread_pool_t *t;
+
+    if (3 != argc) {
+        fprintf(stderr, "Paramter isn't right!\n");
+        return -1;
+    }
+
+    NUM = atoi(argv[1]);
+    MOD = atoi(argv[2]);
 
     mref_init();
 
