@@ -16,7 +16,7 @@ typedef struct
     int idx;
 } list_data_t;
 
-static int rbt_cmp_cb(list_data_t *d1, list_data_t *d2)
+static int64_t rbt_cmp_cb(list_data_t *d1, list_data_t *d2)
 {
     return d1->idx - d2->idx;
 }

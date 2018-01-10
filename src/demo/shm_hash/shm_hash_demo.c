@@ -24,9 +24,9 @@ int main(void)
     return shm_list_test();
 }
 
-static int shm_list_cmp(int *idx, list_data_t *data)
+static int64_t shm_list_cmp(int *idx, list_data_t *data)
 {
-    return *idx - data->idx;
+    return (int64_t)(*idx - data->idx);
 }
 
 int shm_list_test(void)

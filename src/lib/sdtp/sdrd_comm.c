@@ -72,10 +72,10 @@ int sdrd_link_auth_check(sdrd_cntx_t *ctx, sdtp_link_auth_req_t *link_auth_req)
  **注意事项:
  **作    者: # Qifeng.zou # 2016.08.09 14:15:45 #
  ******************************************************************************/
-static int sdrd_node_svr_map_cmp_cb(
+static int64_t sdrd_node_svr_map_cmp_cb(
         const sdrd_dev_to_rsvr_map_t *map1, const sdrd_dev_to_rsvr_map_t *map2)
 {
-    return (map1->nid - map2->nid);
+    return (int64_t)(map1->nid - map2->nid);
 }
 
 /******************************************************************************

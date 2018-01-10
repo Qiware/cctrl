@@ -17,9 +17,9 @@ void avl_trav_print(avl_data_t *data, void *args)
 }
 
 /* 比较回调 */
-int avl_cmp_cb(const avl_data_t *data1, const avl_data_t *data2)
+int64_t avl_cmp_cb(const avl_data_t *data1, const avl_data_t *data2)
 {
-    return (data1->id - data2->id);
+    return (int64_t)(data1->id - data2->id);
 }
 
 int main(void)

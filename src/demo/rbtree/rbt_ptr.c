@@ -33,9 +33,9 @@ void rbt_print_cb(rbt_data_t *data)
     fprintf(stderr, "id:%p", data);
 }
 
-static int rbt_data_cmp_cb(const rbt_data_t *data1, const rbt_data_t *data2)
+static int64_t rbt_data_cmp_cb(const rbt_data_t *data1, const rbt_data_t *data2)
 {
-    return (int)((uint64_t)data1 - (uint64_t)data2);
+    return (int64_t)((uint64_t)data1 - (uint64_t)data2);
 }
 
 #if 1

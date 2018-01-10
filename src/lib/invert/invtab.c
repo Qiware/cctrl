@@ -26,9 +26,9 @@
  **注意事项:
  **作    者: # Qifeng.zou # 2016.08.09 17:19:24 #
  ******************************************************************************/
-static int invtab_dic_cmp_cb(const invt_dic_word_t *dw1, const invt_dic_word_t *dw2)
+static int64_t invtab_dic_cmp_cb(const invt_dic_word_t *dw1, const invt_dic_word_t *dw2)
 {
-    return strcmp(dw1->word.str, dw2->word.str);
+    return (int64_t)strcmp(dw1->word.str, dw2->word.str);
 }
 
 /******************************************************************************

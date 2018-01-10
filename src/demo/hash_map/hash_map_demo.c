@@ -20,9 +20,9 @@ static int64_t hash_cb(const hash_tab_data_t *data)
     return (int64_t)data->idx;
 }
 
-static int cmp_cb(const hash_tab_data_t *d1, const hash_tab_data_t *d2)
+static int64_t cmp_cb(const hash_tab_data_t *d1, const hash_tab_data_t *d2)
 {
-    return (d1->idx - d2->idx);
+    return (int64_t)(d1->idx - d2->idx);
 }
 
 int main(void)
