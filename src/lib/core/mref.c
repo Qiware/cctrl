@@ -1,15 +1,17 @@
 /******************************************************************************
  ** Coypright(C) 2016-2026 Qiware technology Co., Ltd
  **
- ** 文件名: mem_ref.c
+ ** 文件名: mref.c
  ** 版本号: 1.0
  ** 描  述: 内存引用计数管理
  ** 作  者: # Qifeng.zou # 2016年06月27日 星期一 21时19分37秒 #
  ******************************************************************************/
 #include "comm.h"
+#include "mref.h"
 #include "atomic.h"
-#include "mem_ref.h"
 #include "hash_tab.h"
+
+#define MEM_REF_SLOT_LEN    (999)
 
 /* 内存引用项 */
 typedef struct
@@ -21,27 +23,30 @@ typedef struct
         void *pool;                 // 内存池
         mem_dealloc_cb_t dealloc;   // 释放回调
     };
-} mem_ref_item_t;
+} mref_item_t;
 
 /* 内存应用管理表 */
 hash_tab_t *g_mem_ref_tab;
 
-static int mem_ref_add(void *addr, void *pool, mem_dealloc_cb_t dealloc);
+#define GetMrefTab() (g_mem_ref_tab)
+#define SetMrefTab(tab) (g_mem_ref_tab = (tab))
+
+static int mref_add(void *addr, void *pool, mem_dealloc_cb_t dealloc);
 
 /* 哈希回调函数 */
-static uint64_t mem_ref_hash_cb(const mem_ref_item_t *item)
+static uint64_t mref_hash_cb(const mref_item_t *item)
 {
     return (uint64_t)item->addr;
 }
 
 /* 比较回调函数 */
-static int mem_ref_cmp_cb(const mem_ref_item_t *item1, const mem_ref_item_t *item2)
+static int mref_cmp_cb(const mref_item_t *item1, const mref_item_t *item2)
 {
     return ((uint64_t)item1->addr - (uint64_t)item2->addr);
 }
 
 /******************************************************************************
- **函数名称: mem_ref_init
+ **函数名称: mref_init
  **功    能: 初始化内存引用计数表
  **输入参数: NONE
  **输出参数: NONE
@@ -50,21 +55,21 @@ static int mem_ref_cmp_cb(const mem_ref_item_t *item1, const mem_ref_item_t *ite
  **注意事项:
  **作    者: # Qifeng.zou # 2016.06.29 14:45:15 #
  ******************************************************************************/
-int mem_ref_init(void)
+int mref_init(void)
 {
     hash_tab_t *tab;
 
-    tab = hash_tab_creat(333,
-            (hash_cb_t)mem_ref_hash_cb,
-            (cmp_cb_t)mem_ref_cmp_cb, NULL);
+    tab = hash_tab_creat(MEM_REF_SLOT_LEN,
+            (hash_cb_t)mref_hash_cb,
+            (cmp_cb_t)mref_cmp_cb, NULL);
 
-    g_mem_ref_tab = tab;
+    SetMrefTab(tab);
 
     return (NULL == tab)? -1 : 0;
 }
 
 /******************************************************************************
- **函数名称: mem_ref_alloc
+ **函数名称: mref_alloc
  **功    能: 申请内存空间
  **输入参数:
  **     size: 申请内存大小
@@ -77,7 +82,7 @@ int mem_ref_init(void)
  **注意事项:
  **作    者: # Qifeng.zou # 2016.07.04 00:33:34 #
  ******************************************************************************/
-void *mem_ref_alloc(size_t size, void *pool, mem_alloc_cb_t alloc, mem_dealloc_cb_t dealloc)
+void *mref_alloc(size_t size, void *pool, mem_alloc_cb_t alloc, mem_dealloc_cb_t dealloc)
 {
     void *addr;
 
@@ -90,13 +95,13 @@ void *mem_ref_alloc(size_t size, void *pool, mem_alloc_cb_t alloc, mem_dealloc_c
         return NULL;
     }
 
-    mem_ref_add(addr, pool, dealloc);
+    mref_add(addr, pool, dealloc);
 
     return addr;
 }
 
 /******************************************************************************
- **函数名称: mem_ref_add
+ **函数名称: mref_add
  **功    能: 添加新的引用
  **输入参数:
  **     addr: 内存地址
@@ -108,11 +113,11 @@ void *mem_ref_alloc(size_t size, void *pool, mem_alloc_cb_t alloc, mem_dealloc_c
  **注意事项: 
  **作    者: # Qifeng.zou # 2016.09.08 #
  ******************************************************************************/
-static int mem_ref_add(void *addr, void *pool, mem_dealloc_cb_t dealloc)
+static int mref_add(void *addr, void *pool, mem_dealloc_cb_t dealloc)
 {
     int cnt;
-    mem_ref_item_t *item, key;
-    hash_tab_t *tab = g_mem_ref_tab;
+    mref_item_t *item, key;
+    hash_tab_t *tab = GetMrefTab();
 
 AGAIN:
     /* > 查询引用 */
@@ -126,8 +131,9 @@ AGAIN:
     }
 
     /* > 新增引用 */
-    item = (mem_ref_item_t *)calloc(1, sizeof(mem_ref_item_t));
+    item = (mref_item_t *)calloc(1, sizeof(mref_item_t));
     if (NULL == item) {
+        assert(0);
         return -1;
     }
 
@@ -145,7 +151,7 @@ AGAIN:
 }
 
 /******************************************************************************
- **函数名称: mem_ref_dealloc
+ **函数名称: mref_dealloc
  **功    能: 回收内存空间
  **输入参数:
  **     pool: 内存池
@@ -156,27 +162,27 @@ AGAIN:
  **注意事项:
  **作    者: # Qifeng.zou # 2016.07.04 00:33:34 #
  ******************************************************************************/
-void mem_ref_dealloc(void *pool, void *addr)
+void mref_dealloc(void *pool, void *addr)
 {
-    mem_ref_decr(addr);
+    mref_dec(addr);
 }
 
 /******************************************************************************
- **函数名称: mem_ref_incr
+ **函数名称: mref_inc
  **功    能: 增加1次引用
  **输入参数:
  **     addr: 内存地址
  **输出参数: NONE
  **返    回: 内存池
  **实现描述:
- **注意事项: 内存addr必须由mem_ref_alloc进行分配.
+ **注意事项: 内存addr必须由mref_alloc进行分配.
  **作    者: # Qifeng.zou # 2016.07.06 #
  ******************************************************************************/
-int mem_ref_incr(void *addr)
+int mref_inc(void *addr)
 {
     int cnt;
-    mem_ref_item_t *item, key;
-    hash_tab_t *tab = g_mem_ref_tab;
+    mref_item_t *item, key;
+    hash_tab_t *tab = GetMrefTab();
 
     key.addr = addr;
 
@@ -187,11 +193,12 @@ int mem_ref_incr(void *addr)
         return cnt;
     }
 
+    assert(0);
     return -1; // 未创建结点
 }
 
 /******************************************************************************
- **函数名称: mem_ref_decr
+ **函数名称: mref_dec
  **功    能: 减少1次引用
  **输入参数:
  **     addr: 内存地址
@@ -203,17 +210,18 @@ int mem_ref_incr(void *addr)
  **     2. 如果引用计数减为0, 则释放该内存空间.
  **作    者: # Qifeng.zou # 2016.06.29 14:53:09 #
  ******************************************************************************/
-int mem_ref_decr(void *addr)
+int mref_dec(void *addr)
 {
     int cnt;
-    mem_ref_item_t *item, key;
-    hash_tab_t *tab = g_mem_ref_tab;
+    mref_item_t *item, key;
+    hash_tab_t *tab = GetMrefTab();
 
     /* > 修改统计计数 */
     key.addr = addr;
 
     item = hash_tab_query(tab, (void *)&key, RDLOCK);
     if (NULL == item) {
+        assert(0);
         return 0; // Didn't find
     }
 
@@ -241,7 +249,7 @@ int mem_ref_decr(void *addr)
 }
 
 /******************************************************************************
- **函数名称: mem_ref_check
+ **函数名称: mref_check
  **功    能: 内存引用检测
  **输入参数:
  **     addr: 内存地址
@@ -251,16 +259,16 @@ int mem_ref_decr(void *addr)
  **注意事项: 
  **作    者: # Qifeng.zou # 2016.09.08 #
  ******************************************************************************/
-int mem_ref_check(void *addr)
+int mref_check(void *addr)
 {
     int cnt;
-    mem_ref_item_t *item, key;
-    hash_tab_t *tab = g_mem_ref_tab;
+    mref_item_t *item, key;
+    hash_tab_t *tab = GetMrefTab();
 
     /* > 查询引用 */
     key.addr = addr;
 
-    item = (mem_ref_item_t *)hash_tab_query(tab, (void *)&key, RDLOCK);
+    item = (mref_item_t *)hash_tab_query(tab, (void *)&key, RDLOCK);
     if (NULL != item) {
         cnt = item->count;
         hash_tab_unlock(tab, &key, RDLOCK);
