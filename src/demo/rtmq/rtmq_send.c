@@ -2,8 +2,8 @@
 #include <sys/time.h>
 
 #include "mesg.h"
+#include "mref.h"
 #include "search.h"
-#include "mem_ref.h"
 #include "syscall.h"
 #include "test_mesg.h"
 #include "rtmq_proxy.h"
@@ -120,7 +120,7 @@ int main(int argc, const char *argv[])
     port = atoi(argv[1]);
     rtmq_setup_conf(&conf, port);
 
-    mem_ref_init();
+    mref_init();
 
     log = log_init(LOG_LEVEL_ERROR, "./rtmq_ssvr.log");
     if (NULL == log) {

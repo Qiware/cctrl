@@ -1,6 +1,6 @@
 #include "mesg.h"
+#include "mref.h"
 #include "search.h"
-#include "mem_ref.h"
 #include "test_mesg.h"
 #include "rtmq_recv.h"
 
@@ -62,7 +62,7 @@ int main(int argc, const char *argv[])
         return -1;
     }
 
-    mem_ref_init();
+    mref_init();
 
     port = atoi(argv[1]);
 

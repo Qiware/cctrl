@@ -1,49 +1,68 @@
 #include "comm.h"
 #include "ring.h"
-#include "mem_ref.h"
+#include "mref.h"
+#include "queue.h"
 #include "thread_pool.h"
 
 #define NUM (1000)
+#define LEN (1024)
 
-void *addr[NUM];
-ring_t *q;
+queue_t *q;
+
+typedef struct
+{
+    void *base;
+    void *data;
+} item_t;
 
 void *productor(void *arg)
 {
-    int idx, n;
+    int n;
+    void *addr;
+    item_t *item;
 
-    for (idx=0; idx<NUM; idx++) {
-        for (n=0; n<100; n++) {
-            mem_ref_incr(addr[idx]);
-            if (ring_push(q, addr[idx])) {
-                mem_ref_decr(addr[idx]);
+    for (;;) {
+        addr = mref_alloc(LEN, NULL,
+                (mem_alloc_cb_t)mem_alloc,
+                (mem_dealloc_cb_t)mem_dealloc);
+        for (n=0; n<LEN; n++) {
+            item = queue_malloc(q, sizeof(item_t));
+            if (NULL == item) {
+                continue;
+            }
+            item->base = addr;
+            item->data = addr + n;
+            mref_inc(item->base);
+            if (queue_push(q, item)) {
+                mref_dec(item->base);
             }
         }
+        mref_dec(addr);
     }
     return NULL;
 }
 
 void *customer(void *arg)
 {
-    void *data[1024];
-    int num, idx, cnt;
+    int num, idx;
+    item_t *item[1024];
 
     while (1) {
-        num = MIN(ring_used(q), 1024);
+        num = MIN(queue_used(q), 1024);
 
-        num = ring_mpop(q, data, num);
+        num = queue_mpop(q, (void **)item, num);
         if (0 == num) {
-            sleep(1);
+            usleep(0);
             continue;
         }
 
-        for (idx=0; idx<num; idx++) {
-            mem_ref_decr(data[idx]);
-        }
+        fprintf(stderr, "Pop num:%d!\n", num);
 
-        for (idx=0; idx<NUM; idx++) {
-            cnt = mem_ref_check(addr[idx]);
-            fprintf(stderr, "Idx:%d Count:%d\n", idx, cnt);
+        for (idx=0; idx<num; idx++) {
+            fprintf(stderr, "Mem ref:%d!\n", mref_check(item[idx]->base));
+            mref_dec(item[idx]->base);
+            fprintf(stderr, "Mem ref:%d!\n", mref_check(item[idx]->base));
+            queue_dealloc(q, item[idx]);
         }
     }
     return NULL;
@@ -51,18 +70,11 @@ void *customer(void *arg)
 
 int main()
 {
-    int idx;
     thread_pool_t *t;
 
-    mem_ref_init();
+    mref_init();
 
-    for (idx=0; idx<NUM; idx++) {
-        addr[idx] = mem_ref_alloc(1024, NULL,
-                (mem_alloc_cb_t)mem_alloc,
-                (mem_dealloc_cb_t)mem_dealloc);
-    }
-
-    q = ring_creat(1000000000);
+    q = queue_creat(100000, sizeof(item_t));
 
     t = thread_pool_init(5, NULL, NULL);
     if (NULL == t) {
@@ -70,12 +82,12 @@ int main()
         return -1;
     }
 
-    thread_pool_add_worker(t, customer, addr);
-    thread_pool_add_worker(t, customer, addr);
+    thread_pool_add_worker(t, customer, NULL);
+    thread_pool_add_worker(t, customer, NULL);
 
-    thread_pool_add_worker(t, productor, addr);
-    thread_pool_add_worker(t, productor, addr);
-    thread_pool_add_worker(t, productor, addr);
+    thread_pool_add_worker(t, productor, NULL);
+    thread_pool_add_worker(t, productor, NULL);
+    thread_pool_add_worker(t, productor, NULL);
 
     while (1) {
         sleep(1);

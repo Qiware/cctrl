@@ -1,6 +1,6 @@
 #include "comm.h"
 #include "ring.h"
-#include "mem_ref.h"
+#include "mref.h"
 #include "thread_pool.h"
 
 #define NUM (100000)
@@ -11,7 +11,7 @@ int main()
 {
     int idx, num;
 
-    mem_ref_init();
+    mref_init();
 
     for (idx=0; idx<NUM; idx++) {
         addr[idx] = mem_ref_alloc(1, NULL,

@@ -12,7 +12,7 @@ INCLUDE = -I. -I$(PROJ)/src/incl
 LIBS_PATH = -L$(PROJ)/lib
 LIBS = -lcore
 
-SRC_LIST = main.c
+SRC_LIST = thread_mref.c
 
 OBJS = $(subst .c,.o, $(SRC_LIST)) 
 HEADS = $(call func_get_dep_head_list, $(SRC_LIST))
