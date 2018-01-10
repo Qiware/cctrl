@@ -11,7 +11,7 @@
 #include "atomic.h"
 #include "hash_tab.h"
 
-#define MEM_REF_SLOT_LEN    (999)
+#define MREF_SLOT_LEN    (999)
 
 /* 内存引用项 */
 typedef struct
@@ -26,10 +26,10 @@ typedef struct
 } mref_item_t;
 
 /* 内存应用管理表 */
-hash_tab_t *g_mem_ref_tab;
+hash_tab_t *gMemRefTab;
 
-#define GetMrefTab() (g_mem_ref_tab)
-#define SetMrefTab(tab) (g_mem_ref_tab = (tab))
+#define GetMemRef() (gMemRefTab)
+#define SetMemRef(tab) (gMemRefTab = (tab))
 
 static int mref_add(void *addr, void *pool, mem_dealloc_cb_t dealloc);
 
@@ -59,11 +59,11 @@ int mref_init(void)
 {
     hash_tab_t *tab;
 
-    tab = hash_tab_creat(MEM_REF_SLOT_LEN,
+    tab = hash_tab_creat(MREF_SLOT_LEN,
             (hash_cb_t)mref_hash_cb,
             (cmp_cb_t)mref_cmp_cb, NULL);
 
-    SetMrefTab(tab);
+    SetMemRef(tab);
 
     return (NULL == tab)? -1 : 0;
 }
@@ -117,7 +117,7 @@ static int mref_add(void *addr, void *pool, mem_dealloc_cb_t dealloc)
 {
     int cnt;
     mref_item_t *item, key;
-    hash_tab_t *tab = GetMrefTab();
+    hash_tab_t *tab = GetMemRef();
 
 AGAIN:
     /* > 查询引用 */
@@ -182,7 +182,7 @@ int mref_inc(void *addr)
 {
     int cnt;
     mref_item_t *item, key;
-    hash_tab_t *tab = GetMrefTab();
+    hash_tab_t *tab = GetMemRef();
 
     key.addr = addr;
 
@@ -214,7 +214,7 @@ int mref_dec(void *addr)
 {
     int cnt;
     mref_item_t *item, key;
-    hash_tab_t *tab = GetMrefTab();
+    hash_tab_t *tab = GetMemRef();
 
     /* > 修改统计计数 */
     key.addr = addr;
@@ -263,7 +263,7 @@ int mref_check(void *addr)
 {
     int cnt;
     mref_item_t *item, key;
-    hash_tab_t *tab = GetMrefTab();
+    hash_tab_t *tab = GetMemRef();
 
     /* > 查询引用 */
     key.addr = addr;
