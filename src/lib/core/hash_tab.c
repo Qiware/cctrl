@@ -96,7 +96,7 @@ hash_tab_t *hash_tab_creat(int len, hash_cb_t hash, cmp_cb_t cmp, hash_tab_opt_t
     htab->alloc = (mem_alloc_cb_t)opt->alloc;
     htab->dealloc = (mem_dealloc_cb_t)opt->dealloc;
 
-    htab->tree = (void **)opt->alloc(opt->pool, len*sizeof(void *));
+    htab->tree = (rbt_tree_t **)opt->alloc(opt->pool, len*sizeof(rbt_tree_t *));
     if (NULL == htab->tree) {
         opt->dealloc(opt->pool, htab);
         return NULL;
@@ -177,13 +177,13 @@ int hash_tab_insert(hash_tab_t *htab, void *data, lock_e lock)
  ******************************************************************************/
 void *hash_tab_query(hash_tab_t *htab, void *key, lock_e lock)
 {
-    void *data;
+    void *data = NULL;
     unsigned int idx;
 
     idx = htab->hash(key) % htab->len;
 
     _hash_tab_lock(htab, idx, lock);
-    data = rbt_query((void *)htab->tree[idx], key);
+    data = rbt_query((rbt_tree_t *)htab->tree[idx], key);
     if (NULL == data) {
         _hash_tab_unlock(htab, idx, lock);
         return NULL; /* 未找到 */
@@ -220,6 +220,17 @@ void *hash_tab_delete(hash_tab_t *htab, void *key, lock_e lock)
     _hash_tab_unlock(htab, idx, lock);
 
     return data;
+}
+
+void hash_tab_print(hash_tab_t *htab, void *key, lock_e lock, print_cb_t print_cb)
+{
+    unsigned int idx;
+
+    idx = htab->hash(key) % htab->len;
+
+    _hash_tab_lock(htab, idx, lock);
+    rbt_print(htab->tree[idx], print_cb);
+    _hash_tab_unlock(htab, idx, lock);
 }
 
 /******************************************************************************

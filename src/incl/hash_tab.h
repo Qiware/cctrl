@@ -3,6 +3,7 @@
 
 #include "comm.h"
 #include "lock.h"
+#include "rb_tree.h"
 
 /* 选线 */
 typedef struct
@@ -18,7 +19,7 @@ typedef struct
     int len;                                        /* 数组长 */
     uint64_t total;                                 /* 数据总数 */
 
-    void **tree;                                    /* 树(长度: len) */
+    rbt_tree_t **tree;                              /* 树(长度: len) */
     pthread_rwlock_t *lock;                         /* 树锁(长度: len) */
 
     cmp_cb_t cmp;                                   /* 比较回调 */
@@ -40,6 +41,8 @@ void *hash_tab_delete(hash_tab_t *htab, void *key, lock_e lock);
 int hash_tab_trav(hash_tab_t *htab, trav_cb_t proc, void *args, lock_e lock);
 int hash_tab_trav_slot(hash_tab_t *htab, const void *key, trav_cb_t proc, void *args, lock_e lock);
 int hash_tab_destroy(hash_tab_t *htab, mem_dealloc_cb_t dealloc, void *args);
+
+void hash_tab_print(hash_tab_t *htab, void *key, lock_e lock, print_cb_t print_cb);
 
 #define hash_tab_total(htab) ((htab)->total)
 
