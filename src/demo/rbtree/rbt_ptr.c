@@ -11,207 +11,213 @@
 #include "rb_tree.h"
 #include "hash_tab.h"
 
-#define SID_BEG     (1)
-#define NUM         (10)
-
 typedef struct
 {
-    uint64_t *id;
-    uint32_t flag;
-} rbt_data_t;
+    void *addr;
+} item_t;
 
-void rbt_trav_print_hdl(rbt_data_t *data, void *args)
+void rbt_trav_print_hdl(item_t *item, void *args)
 {
-    static uint32_t idx = 0;
-
-    fprintf(stderr, "idx:%u id:%p\n", ++idx, data->id);
+    fprintf(stderr, "addr:%p\n", item->addr);
 }
 
-void rbt_print_cb(rbt_data_t *data)
+void rbt_print_cb(item_t *item)
 {
-    //fprintf(stderr, "id:%p", data->id);
-    fprintf(stderr, "id:%p", data);
+    fprintf(stderr, "addr:%p", item->addr);
 }
 
-static int64_t rbt_data_cmp_cb(const rbt_data_t *data1, const rbt_data_t *data2)
+static int64_t rbt_item_cmp_cb(const item_t *item1, const item_t *item2)
 {
-    return (int64_t)((uint64_t)data1 - (uint64_t)data2);
+    return (int64_t)(item1->addr - item2->addr);
 }
 
-#if 1
-static int rbt_trav_insert_list(rbt_data_t *data, list_t *list)
+int main(int argc, char *argv[])
 {
-    if (!data->flag) {
+    rbt_tree_t *rbt;
+    item_t *item, key;
+
+    rbt = rbt_creat(NULL, (cmp_cb_t)rbt_item_cmp_cb);
+    if (NULL == rbt) {
+        return -1;
+    }
+
+    // 1
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6c0c000030;
+
+    rbt_insert(rbt, item);
+
+    // 2
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6bc5900080;
+
+    rbt_insert(rbt, item);
+
+    // 3
+    fprintf(stderr, "Line:%d\n", __LINE__);
+    rbt_print(rbt, (print_cb_t)rbt_print_cb);
+
+    key.addr = (void *)0x7f6c0c000030;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
         assert(0);
     }
-    if ((uint64_t)data->id%9) {
-        if (rand()%2) {
-            list_rpush(list, data);
-        } else {
-            list_lpush(list, data);
-        }
-    }
-    return 0;
-}
 
-int main(void)
-{
-    int idx, list_len;
-    list_t *list;
-    rbt_tree_t *rbt;
-    rbt_data_t *data, *temp;
+    // 4
+    item = (item_t *)calloc(1, sizeof(item_t));
+    item->addr = (void *)0x7f6b7f2000d0;
 
-    rbt = rbt_creat(NULL, (cmp_cb_t)rbt_data_cmp_cb);
-    if (NULL == rbt) {
-        return -1;
-    }
+    rbt_insert(rbt, item);
 
-    do {
-        list = list_creat(NULL);
-        if (NULL == list) {
-            return -1;
-        }
+    // 5
+    item = (item_t *)calloc(1, sizeof(item_t));
 
-        for (idx=0; idx<NUM; ++idx) {
-            data = (rbt_data_t *)calloc(1, sizeof(rbt_data_t));
-            data->id = (uint64_t *)(SID_BEG + (uint64_t)idx);
-            if (rbt_insert(rbt, data)) {
-                free(data);
-            }
-            data->flag = 1;
-        }
+    item->addr = (void *)0x7f6c0c000030;
 
-        rbt_print(rbt, (print_cb_t)rbt_print_cb);
+    rbt_insert(rbt, item);
 
-        pause();
-
-        rbt_trav(rbt, (trav_cb_t)rbt_trav_insert_list, (void *)list);
-
-        list_len = list_length(list);
-        while ((data = (rbt_data_t *)list_lpop(list))) {
-            temp = NULL;
-            rbt_delete(rbt, (void *)data, (void **)&temp);
-            if (NULL == temp || data != temp) {
-                assert(0);
-            }
-            data->flag = 0;
-            free(data);
-        }
-
-
-        if (NUM != list_len + rbt_num(rbt)) {
-            assert(0);
-        }
-
-        list_destroy(list, (mem_dealloc_cb_t)mem_dummy_dealloc, NULL);
-
-#if 0
-        ////////////////////////////
-        list = list_creat(NULL);
-        if (NULL == list) {
-            return -1;
-        }
-
-        rbt_trav(rbt, (trav_cb_t)rbt_trav_insert_list, (void *)list);
-
-        list_len = list_length(list);
-        while ((data = (rbt_data_t *)list_lpop(list))) {
-            temp = NULL;
-            rbt_delete(rbt, (void *)data, (void **)&temp);
-            if (NULL == temp || data != temp) {
-                assert(0);
-            }
-            data->flag = 0;
-            free(data);
-        }
-
-        list_destroy(list, (mem_dealloc_cb_t)mem_dummy_dealloc, NULL);
-#endif
-    } while(1);
-
-    return 0;
-}
-#else
-static uint64_t hash_cb(const rbt_data_t *data)
-{
-    return data->id;
-}
-
-static int htab_trav_insert_rbt(rbt_data_t *data, rbt_tree_t *rbt)
-{
-    rbt_insert(rbt, data);
-    return 0;
-}
-
-static int htab_trav_delete_rbt(rbt_data_t *data, rbt_tree_t *rbt)
-{
-    rbt_data_t *item;
-
-    if (0 == data->id % 3) {
-        item = rbt_query(rbt, data);
-        if (NULL == item) {
-            assert(0);
-        }
-
-        rbt_delete(rbt, (void *)data, (void **)&item);
-        if (NULL == item) {
-            assert(0);
-        }
-
-        item = rbt_query(rbt, data);
-        if (NULL != item) {
-            assert(0);
-        }
+    // 6
+    key.addr = (void *)0x7f6bc5900080;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
     }
 
-    return 0;
-}
-int main(void)
-{
-    int idx, n;
-    uint64_t last;
-    rbt_tree_t *rbt;
-    hash_tab_t *tab;
-    rbt_data_t *data, key;
-
-    tab = hash_tab_creat(555, (hash_cb_t)hash_cb, (cmp_cb_t)rbt_data_cmp_cb, NULL);
-    if (NULL == tab) {
-        return -1;
+    // 6
+    key.addr = (void *)0x7f6c0c000030;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
     }
 
-    for (idx=0; idx<NUM; ++idx) {
-        data = (rbt_data_t *)calloc(1, sizeof(rbt_data_t));
-        data->id = SID_BEG + idx;
-        hash_tab_insert(tab, data, NONLOCK);
+    // 7
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6c0c000030;
+
+    rbt_insert(rbt, item);
+
+    // 8
+    key.addr = (void *)0x7f6b7f2000d0;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
     }
 
-    rbt = rbt_creat(NULL, (cmp_cb_t)rbt_data_cmp_cb);
-    if (NULL == rbt) {
-        return -1;
+    // 7
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6b7f2000d0;
+
+    rbt_insert(rbt, item);
+
+    // 8
+    key.addr = (void *)0x7f6c0c000030;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
     }
 
-    hash_tab_trav(tab, (trav_cb_t)htab_trav_insert_rbt, rbt, NONLOCK);
-    hash_tab_trav(tab, (trav_cb_t)htab_trav_delete_rbt, rbt, NONLOCK);
+    // 9
+    item = (item_t *)calloc(1, sizeof(item_t));
 
-    n = 0;
-    last = SID_BEG - 1;
-    for (idx=0; idx<NUM; ++idx) {
-        key.id = SID_BEG + idx;
-        data = rbt_query(rbt, &key);
-        if (NULL == data) {
-            continue;
-            assert(0);
-        } else if (last + 1 != data->id) {
-            //assert(0);
-        }
-        last = data->id;
-        fprintf(stderr, "idx:%d data:%p id:%lu\n", ++n, data, data->id);
+    item->addr = (void *)0x7f6c0c000030;
+
+    rbt_insert(rbt, item);
+
+    // 10
+    key.addr = (void *)0x7f6b7f2000d0;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
     }
 
-    //rbt_trav(rbt, (trav_cb_t)rbt_trav_print_hdl, NULL);
-    //rbt_print(rbt, (print_cb_t)rbt_print_cb);
+    // 11
+    key.addr = (void *)0x7f6c0c000030;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
+    }
 
+    // 12
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6b7f2000d0;
+
+    rbt_insert(rbt, item);
+
+    // 13
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6c0c000030;
+
+    rbt_insert(rbt, item);
+
+    // 14
+    key.addr = (void *)0x7f6b7f2000d0;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
+    }
+
+    // 15
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6b7f2000d0;
+
+    rbt_insert(rbt, item);
+
+    // 16
+    key.addr = (void *)0x7f6c0c000030;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
+    }
+
+    fprintf(stderr, "Line:%d\n", __LINE__);
+    rbt_print(rbt, (print_cb_t)rbt_print_cb);
+
+    // 17
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6c0c000030;
+
+    rbt_insert(rbt, item);
+
+    fprintf(stderr, "Line:%d\n", __LINE__);
+    rbt_print(rbt, (print_cb_t)rbt_print_cb);
+
+    // 18
+    item = (item_t *)calloc(1, sizeof(item_t));
+
+    item->addr = (void *)0x7f6bc5900080;
+
+    rbt_insert(rbt, item);
+
+    fprintf(stderr, "Line:%d\n", __LINE__);
+    rbt_print(rbt, (print_cb_t)rbt_print_cb);
+
+    // 19
+    key.addr = (void *)0x7f6b7f2000d0;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
+    }
+
+    fprintf(stderr, "Line:%d\n", __LINE__);
+    rbt_print(rbt, (print_cb_t)rbt_print_cb);
+
+    // 20
+    key.addr = (void *)0x7f6c0c000030;
+    rbt_delete(rbt, &key, (void **)&item);
+    if ((NULL == item) || (item->addr != key.addr)) {
+        assert(0);
+    }
+
+    // finish
+    rbt_print(rbt, (print_cb_t)rbt_print_cb);
 
     return 0;
 }
-#endif

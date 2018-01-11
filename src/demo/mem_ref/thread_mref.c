@@ -4,7 +4,7 @@
 #include "queue.h"
 #include "thread_pool.h"
 
-#define LEN (1 * MB)
+#define LEN (5 * MB)
 
 queue_t *q;
 int NUM = 1;
